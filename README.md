@@ -25,6 +25,10 @@ En migración de prototipo a versión profesional.
 \- \[ ] Tests
 
 
+git add archivo
+git commit -m "qué cambié"
+git push
+
 
 \## Cómo abrir
 
