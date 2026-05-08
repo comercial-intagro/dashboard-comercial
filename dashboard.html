@@ -1222,6 +1222,9 @@
 
     <script>
         const SHEET_ID = "1QqU4a9Oj3rHBESQOmu47cVmYLUJ13olFrPu47xDFF_g";
+        // URL del Apps Script Backend (portero autenticado).
+        // El backend verifica autenticación Google y devuelve los datos del Sheet privado.
+        const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzgtFKuT5wNH240sRx5Xnbl-5sknaCuDWWU7q3XNdkPHDDVrlaprv_XoN3ZliBg_oXx7A/exec";
 
         Chart.register(ChartDataLabels);
 
@@ -1604,11 +1607,107 @@
         }}}};
 
         function autoLoadData(){
-            const script=document.createElement('script');
-            const cacheBuster=new Date().getTime();
-            script.src=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&t=${cacheBuster}`;
-            script.onerror=function(){showCriticalError("El entorno o antivirus bloqueó la ejecución de scripts externos.");};
+            // Carga el DB principal a través del backend autenticado (Apps Script).
+            // Usamos JSONP (script tag) para evitar problemas CORS y mantener
+            // automáticamente la sesión de Google del navegador.
+            const loaderTitle = document.getElementById('loaderTitle');
+            if (loaderTitle) loaderTitle.innerText = "Conectando al servidor...";
+
+            // Convierte un valor crudo (número/fecha/string) al string formateado
+            // que el parser espera (formato argentino, igual al que daba gviz cell.f).
+            // Detecta también strings ISO 8601 (ej: "2025-04-30T03:00:00.000Z") que es como
+            // viajan las fechas en JSON (Apps Script las serializa así).
+            const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+            function formatCellValue(v) {
+                if (v === null || v === undefined || v === '') return '';
+                // Caso 1: Date object real (raro vía JSON, pero por si acaso)
+                if (v instanceof Date) {
+                    if (isNaN(v.getTime())) return '';
+                    const dd = v.getDate();
+                    const mm = v.getMonth() + 1;
+                    const yy = v.getFullYear();
+                    return dd + '/' + mm + '/' + yy;
+                }
+                // Caso 2: número crudo
+                if (typeof v === 'number') {
+                    return v.toLocaleString('de-DE', { maximumFractionDigits: 6 });
+                }
+                // Caso 3: string ISO de fecha (lo más común vía JSON)
+                if (typeof v === 'string' && ISO_DATE_REGEX.test(v)) {
+                    // Parseamos sólo la parte YYYY-MM-DD para evitar problemas de huso horario.
+                    // Apps Script en Argentina serializa como "2025-04-30T03:00:00.000Z"
+                    // (mediodía GMT-3 = 03:00 UTC). Tomar la parte de fecha del ISO directamente
+                    // evita que JS interprete como un día anterior.
+                    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (m) {
+                        const year = parseInt(m[1], 10);
+                        const month = parseInt(m[2], 10);
+                        const day = parseInt(m[3], 10);
+                        return day + '/' + month + '/' + year;
+                    }
+                }
+                // Caso 4: cualquier otra cosa (string normal) la pasa tal cual
+                return String(v);
+            }
+
+            // DEBUG temporal: imprime una muestra de la primera fila de datos en consola
+            function __debugFirstRow(headers, firstRow) {
+                console.log('=== DEBUG carga Apps Script ===');
+                console.log('Headers (' + headers.length + '): ', headers);
+                console.log('Primera fila tipos:');
+                firstRow.forEach((v, i) => {
+                    const t = (v instanceof Date) ? 'Date' : typeof v;
+                    console.log('  [' + i + '] ' + (headers[i] || '?') + ': tipo=' + t + ' | valor=' + JSON.stringify(v) + ' | formateado="' + formatCellValue(v) + '"');
+                });
+                console.log('=== FIN DEBUG ===');
+            }
+
+            // Definimos un callback global único que el Apps Script va a invocar
+            window.onBackendData = function(payload) {
+                try {
+                    if (!payload || !payload.ok) {
+                        showCriticalError(payload && payload.error ? payload.error : "Error desconocido del servidor.");
+                        return;
+                    }
+                    if (!Array.isArray(payload.data) || payload.data.length === 0) {
+                        showCriticalError("El servidor respondió, pero no hay datos.");
+                        return;
+                    }
+                    // Traducir formato Apps Script al formato gviz que espera setResponse.
+                    // CLAVE: el parser usa cell.f (valor formateado) cuando existe.
+                    // Replicamos formato AR (separadores y fechas dd/mm/yyyy) para no romper el parser.
+                    const rows = payload.data;
+                    const headers = rows[0];
+                    const dataRows = rows.slice(1);
+                    const gvizPayload = {
+                        table: {
+                            cols: headers.map(h => ({ label: h || "Sin Título" })),
+                            rows: dataRows.map(r => ({
+                                c: r.map(v => {
+                                    const f = formatCellValue(v);
+                                    // Pasamos f y v: el parser prefiere f, igual que con gviz original.
+                                    return { v: v, f: f };
+                                })
+                            }))
+                        }
+                    };
+                    window.google.visualization.Query.setResponse(gvizPayload);
+                } catch (e) {
+                    showCriticalError("Error procesando datos del servidor: " + e.message);
+                }
+            };
+
+            const cacheBuster = new Date().getTime();
+            const script = document.createElement('script');
+            script.src = `${BACKEND_URL}?callback=onBackendData&t=${cacheBuster}`;
+            script.onerror = function() {
+                showCriticalError(
+                    "No se pudo conectar al servidor. " +
+                    "Asegurate de estar logueado con tu Gmail autorizado en este navegador."
+                );
+            };
             document.body.appendChild(script);
+
             // Cargar también la pestaña SIO_2026 en paralelo (Share SIO del dashboard depende de ella)
             if (typeof loadSio2026FromSheet === 'function') {
                 try { loadSio2026FromSheet(); } catch(e) { console.warn('[SIO_2026] error al disparar carga inicial:', e.message); }
