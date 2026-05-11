@@ -9,6 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <!-- Google Identity Services para autenticación sin fricción -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
         :root {
@@ -1222,9 +1224,10 @@
 
     <script>
         const SHEET_ID = "1QqU4a9Oj3rHBESQOmu47cVmYLUJ13olFrPu47xDFF_g";
-        // URL del Apps Script Backend (portero autenticado).
-        // El backend verifica autenticación Google y devuelve los datos del Sheet privado.
+        // URL del Apps Script Backend (portero autenticado)
         const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzgtFKuT5wNH240sRx5Xnbl-5sknaCuDWWU7q3XNdkPHDDVrlaprv_XoN3ZliBg_oXx7A/exec";
+        // OAuth Client ID para Google Identity Services
+        const OAUTH_CLIENT_ID = "876181498136-kfoidb9k07kvhsclocn3mf8iof9emsa3.apps.googleusercontent.com";
 
         Chart.register(ChartDataLabels);
 
@@ -1606,63 +1609,132 @@
             }catch(e){showCriticalError("Error procesando datos: "+e.message);}
         }}}};
 
-        function autoLoadData(){
-            // Carga el DB principal a través del backend autenticado (Apps Script).
-            // Usamos JSONP (script tag) para evitar problemas CORS y mantener
-            // automáticamente la sesión de Google del navegador.
+        // ============================================================
+        // AUTENTICACIÓN CON GOOGLE IDENTITY SERVICES + CARGA DE DATOS
+        // ============================================================
+
+        // Estado global del token Google
+        let __googleIdToken = null;
+
+        // Convierte un valor crudo (número/fecha/string) al formato AR que espera el parser viejo.
+        // Detecta strings ISO 8601 (fechas serializadas vía JSON) y los pasa a "d/m/yyyy".
+        const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+        function formatCellValue(v) {
+            if (v === null || v === undefined || v === '') return '';
+            if (v instanceof Date) {
+                if (isNaN(v.getTime())) return '';
+                return v.getDate() + '/' + (v.getMonth() + 1) + '/' + v.getFullYear();
+            }
+            if (typeof v === 'number') {
+                return v.toLocaleString('de-DE', { maximumFractionDigits: 6 });
+            }
+            if (typeof v === 'string' && ISO_DATE_REGEX.test(v)) {
+                const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m) {
+                    return parseInt(m[3], 10) + '/' + parseInt(m[2], 10) + '/' + parseInt(m[1], 10);
+                }
+            }
+            return String(v);
+        }
+
+        // Espera a que google.accounts.id esté disponible (puede llegar después del DOMContentLoaded)
+        function waitForGoogleIdentity(maxWaitMs, callback) {
+            const start = Date.now();
+            (function check() {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                    callback(true);
+                } else if (Date.now() - start > maxWaitMs) {
+                    callback(false);
+                } else {
+                    setTimeout(check, 100);
+                }
+            })();
+        }
+
+        // Inicializa Google Identity Services y configura el callback para cuando el usuario se autentique
+        function initGoogleAuth() {
+            const loaderTitle = document.getElementById('loaderTitle');
+            if (loaderTitle) loaderTitle.innerText = "Verificando sesión...";
+
+            waitForGoogleIdentity(8000, function(ready) {
+                if (!ready) {
+                    showCriticalError("No se pudo cargar la biblioteca de Google. Verificá tu conexión y refrescá la página.");
+                    return;
+                }
+                try {
+                    google.accounts.id.initialize({
+                        client_id: OAUTH_CLIENT_ID,
+                        callback: onGoogleSignIn,
+                        auto_select: true,
+                        cancel_on_tap_outside: false
+                    });
+                    // Intentar login automático silencioso (One Tap)
+                    google.accounts.id.prompt(function(notification) {
+                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                            // No hay sesión activa en el navegador → mostrar botón explícito
+                            showLoginButton();
+                        }
+                    });
+                } catch (err) {
+                    showCriticalError("Error inicializando Google Sign-In: " + err.message);
+                }
+            });
+        }
+
+        // Muestra un botón "Iniciar sesión con Google" cuando el One Tap falla
+        function showLoginButton() {
+            const loaderTitle = document.getElementById('loaderTitle');
+            const errorMsg = document.getElementById('errorMsg');
+            const spinner = document.querySelector('.animate-spin');
+            if (spinner) spinner.classList.remove('animate-spin');
+            const icon = document.querySelector('.ri-loader-4-line');
+            if (icon) icon.className = "ri-user-line";
+            if (loaderTitle) loaderTitle.innerText = "Iniciar sesión";
+            if (errorMsg) {
+                errorMsg.innerHTML = '<div id="googleBtnContainer" style="display:flex;justify-content:center;margin-top:10px;"></div>' +
+                                     '<div style="margin-top:12px;font-size:0.85rem;color:#64748b;">Iniciá sesión con tu cuenta de Gmail autorizada para acceder al dashboard.</div>';
+                errorMsg.style.display = "block";
+                errorMsg.style.background = "transparent";
+                errorMsg.style.border = "none";
+                errorMsg.style.color = "#0f172a";
+            }
+            // Renderizar el botón oficial de Google
+            try {
+                google.accounts.id.renderButton(
+                    document.getElementById('googleBtnContainer'),
+                    { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' }
+                );
+            } catch (err) {
+                console.error('Error renderizando botón Google:', err);
+            }
+        }
+
+        // Callback que Google llama después de que el usuario inicia sesión.
+        // Recibe un ID Token (JWT) que vamos a mandar al Apps Script para verificar.
+        function onGoogleSignIn(response) {
+            if (!response || !response.credential) {
+                showCriticalError("No se recibió el token de Google. Refrescá e intentá de nuevo.");
+                return;
+            }
+            __googleIdToken = response.credential;
+            // Restaurar el loader visual y arrancar la carga de datos
+            const errorMsg = document.getElementById('errorMsg');
+            if (errorMsg) { errorMsg.style.display = "none"; errorMsg.innerHTML = ""; }
+            const icon = document.querySelector('.ri-user-line');
+            if (icon) icon.className = "ri-loader-4-line animate-spin";
             const loaderTitle = document.getElementById('loaderTitle');
             if (loaderTitle) loaderTitle.innerText = "Conectando al servidor...";
+            fetchDashboardData();
+        }
 
-            // Convierte un valor crudo (número/fecha/string) al string formateado
-            // que el parser espera (formato argentino, igual al que daba gviz cell.f).
-            // Detecta también strings ISO 8601 (ej: "2025-04-30T03:00:00.000Z") que es como
-            // viajan las fechas en JSON (Apps Script las serializa así).
-            const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-            function formatCellValue(v) {
-                if (v === null || v === undefined || v === '') return '';
-                // Caso 1: Date object real (raro vía JSON, pero por si acaso)
-                if (v instanceof Date) {
-                    if (isNaN(v.getTime())) return '';
-                    const dd = v.getDate();
-                    const mm = v.getMonth() + 1;
-                    const yy = v.getFullYear();
-                    return dd + '/' + mm + '/' + yy;
-                }
-                // Caso 2: número crudo
-                if (typeof v === 'number') {
-                    return v.toLocaleString('de-DE', { maximumFractionDigits: 6 });
-                }
-                // Caso 3: string ISO de fecha (lo más común vía JSON)
-                if (typeof v === 'string' && ISO_DATE_REGEX.test(v)) {
-                    // Parseamos sólo la parte YYYY-MM-DD para evitar problemas de huso horario.
-                    // Apps Script en Argentina serializa como "2025-04-30T03:00:00.000Z"
-                    // (mediodía GMT-3 = 03:00 UTC). Tomar la parte de fecha del ISO directamente
-                    // evita que JS interprete como un día anterior.
-                    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                    if (m) {
-                        const year = parseInt(m[1], 10);
-                        const month = parseInt(m[2], 10);
-                        const day = parseInt(m[3], 10);
-                        return day + '/' + month + '/' + year;
-                    }
-                }
-                // Caso 4: cualquier otra cosa (string normal) la pasa tal cual
-                return String(v);
+        // Pide los datos al Apps Script vía JSONP, enviando el ID Token como parámetro.
+        function fetchDashboardData() {
+            if (!__googleIdToken) {
+                showCriticalError("Sesión inválida. Refrescá la página.");
+                return;
             }
 
-            // DEBUG temporal: imprime una muestra de la primera fila de datos en consola
-            function __debugFirstRow(headers, firstRow) {
-                console.log('=== DEBUG carga Apps Script ===');
-                console.log('Headers (' + headers.length + '): ', headers);
-                console.log('Primera fila tipos:');
-                firstRow.forEach((v, i) => {
-                    const t = (v instanceof Date) ? 'Date' : typeof v;
-                    console.log('  [' + i + '] ' + (headers[i] || '?') + ': tipo=' + t + ' | valor=' + JSON.stringify(v) + ' | formateado="' + formatCellValue(v) + '"');
-                });
-                console.log('=== FIN DEBUG ===');
-            }
-
-            // Definimos un callback global único que el Apps Script va a invocar
+            // Callback global que el Apps Script va a invocar con los datos
             window.onBackendData = function(payload) {
                 try {
                     if (!payload || !payload.ok) {
@@ -1674,8 +1746,6 @@
                         return;
                     }
                     // Traducir formato Apps Script al formato gviz que espera setResponse.
-                    // CLAVE: el parser usa cell.f (valor formateado) cuando existe.
-                    // Replicamos formato AR (separadores y fechas dd/mm/yyyy) para no romper el parser.
                     const rows = payload.data;
                     const headers = rows[0];
                     const dataRows = rows.slice(1);
@@ -1683,11 +1753,7 @@
                         table: {
                             cols: headers.map(h => ({ label: h || "Sin Título" })),
                             rows: dataRows.map(r => ({
-                                c: r.map(v => {
-                                    const f = formatCellValue(v);
-                                    // Pasamos f y v: el parser prefiere f, igual que con gviz original.
-                                    return { v: v, f: f };
-                                })
+                                c: r.map(v => ({ v: v, f: formatCellValue(v) }))
                             }))
                         }
                     };
@@ -1699,19 +1765,21 @@
 
             const cacheBuster = new Date().getTime();
             const script = document.createElement('script');
-            script.src = `${BACKEND_URL}?callback=onBackendData&t=${cacheBuster}`;
+            script.src = `${BACKEND_URL}?callback=onBackendData&id_token=${encodeURIComponent(__googleIdToken)}&t=${cacheBuster}`;
             script.onerror = function() {
-                showCriticalError(
-                    "No se pudo conectar al servidor. " +
-                    "Asegurate de estar logueado con tu Gmail autorizado en este navegador."
-                );
+                showCriticalError("No se pudo conectar al servidor. Verificá tu conexión.");
             };
             document.body.appendChild(script);
 
-            // Cargar también la pestaña SIO_2026 en paralelo (Share SIO del dashboard depende de ella)
+            // Cargar también la pestaña SIO_2026 en paralelo
             if (typeof loadSio2026FromSheet === 'function') {
-                try { loadSio2026FromSheet(); } catch(e) { console.warn('[SIO_2026] error al disparar carga inicial:', e.message); }
+                try { loadSio2026FromSheet(); } catch(e) { console.warn('[SIO_2026] error:', e.message); }
             }
+        }
+
+        // Punto de entrada: en lugar de cargar datos directo, arranca el flujo de autenticación.
+        function autoLoadData() {
+            initGoogleAuth();
         }
 
         function showCriticalError(msg){
