@@ -1745,6 +1745,50 @@
                         showCriticalError("El servidor respondió, pero no hay datos.");
                         return;
                     }
+                    // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
+                    if (payload.sio2026 && Array.isArray(payload.sio2026) && payload.sio2026.length > 1) {
+                        try {
+                            const sioRows = payload.sio2026.slice(1); // saltar header
+                            const monthsValid = ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'];
+                            const parsed = {};
+                            sioRows.forEach(r => {
+                                if (!r || !r[0]) return;
+                                const mon = r[0].toString().trim().toLowerCase();
+                                if (!monthsValid.includes(mon)) return;
+                                const num = (idx) => {
+                                    const v = r[idx];
+                                    if (v === '' || v === null || v === undefined) return 0;
+                                    if (typeof v === 'number') return v;
+                                    const n = parseFloat(v.toString().replace(/\./g,'').replace(',','.'));
+                                    return isNaN(n) ? 0 : n;
+                                };
+                                parsed[mon] = {
+                                    total:   num(1),
+                                    CEBADA:  num(2),
+                                    GIRASOL: num(3),
+                                    MAIZ:    num(4),
+                                    SOJA:    num(5),
+                                    SORGO:   num(6),
+                                    TRIGO:   num(7),
+                                };
+                            });
+                            if (Object.keys(parsed).length > 0) {
+                                SIO_2026 = parsed;
+                                SIO_2026_LOADED = true;
+                                SIO_2026_LOAD_ATTEMPTED = true; // bloquea la llamada gviz posterior
+                                const banner = document.getElementById('sioStatusBanner');
+                                const txt = document.getElementById('sioStatusTxt');
+                                if (banner && txt) {
+                                    banner.classList.remove('warn');
+                                    txt.innerText = 'SIO_2026 actualizado desde Sheet';
+                                    const icn = banner.querySelector('i'); if (icn) icn.className = 'ri-checkbox-circle-fill';
+                                }
+                                console.log("[SIO_2026] cargado desde Apps Script: " + Object.keys(parsed).length + " meses");
+                            }
+                        } catch (e) {
+                            console.warn("[SIO_2026] error parseando payload:", e.message);
+                        }
+                    }
                     // Traducir formato Apps Script al formato gviz que espera setResponse.
                     const rows = payload.data;
                     const headers = rows[0];
@@ -1771,10 +1815,6 @@
             };
             document.body.appendChild(script);
 
-            // Cargar también la pestaña SIO_2026 en paralelo
-            if (typeof loadSio2026FromSheet === 'function') {
-                try { loadSio2026FromSheet(); } catch(e) { console.warn('[SIO_2026] error:', e.message); }
-            }
         }
 
         // Punto de entrada: en lugar de cargar datos directo, arranca el flujo de autenticación.
