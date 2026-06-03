@@ -1815,14 +1815,13 @@
             };
 
             const cacheBuster = new Date().getTime();
-            // Generar un session id efímero (solo dura mientras la pestaña esté abierta)
+            // Session id efímero (corto, no infla la URL)
             if (!window.__sessionId) {
                 window.__sessionId = 'S' + Math.random().toString(36).substr(2, 8) + Date.now().toString(36).substr(-4);
             }
-            const ua = encodeURIComponent(navigator.userAgent || '');
             const sid = encodeURIComponent(window.__sessionId);
             const script = document.createElement('script');
-            script.src = `${BACKEND_URL}?callback=onBackendData&id_token=${encodeURIComponent(__googleIdToken)}&ua=${ua}&sid=${sid}&t=${cacheBuster}`;
+            script.src = `${BACKEND_URL}?callback=onBackendData&id_token=${encodeURIComponent(__googleIdToken)}&sid=${sid}&t=${cacheBuster}`;
             script.onerror = function() {
                 showCriticalError("No se pudo conectar al servidor. Verificá tu conexión.");
             };
