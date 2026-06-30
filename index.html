@@ -1848,6 +1848,7 @@
             const colCos=findKey('COSECHA')||'COSECHA';
             const colCuitVend=findExact('CUIT VENDEDOR')||findExact('CUIT')||findKey('CUIT VEND')||'CUIT VENDEDOR';
             const colCuitComp=findExact('CUIT COMPRADOR')||findKey('CUIT COMP')||'CUIT COMPRADOR';
+            const colComp=findExact('COMPRADOR')||findKey('COMPRADOR')||'Comprador';
             const colNroVend=findExact('NRO. VENDEDOR')||findExact('NRO VENDEDOR')||findKey('NRO')||'NRO. VENDEDOR';
 
             let latestDate=new Date(2020,0,1);
@@ -1908,6 +1909,7 @@
                     cuit:cuitVendRaw,
                     cuitLimpio: cuitVendLimpio,
                     cuitComp: cuitCompLimpio,
+                    comprador: (row[colComp]||'').toString().trim(),
                     cat: catProd,
                     vol:tn,
                     h:(row[colCos]||'').trim()
