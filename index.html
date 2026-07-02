@@ -2864,6 +2864,10 @@ ${totalsRow}
             
             let lbls, data25, data26, colors25, colors26;
 
+            // Totales de TODOS los productos (para % de incidencia sobre el volumen total de la empresa)
+            const totalProd25 = p25.SOJA+p25.MAIZ+p25.TRIGO+p25.GIRASOL+p25.CEBADA+p25.SORGO;
+            const totalProd26 = p26.SOJA+p26.MAIZ+p26.TRIGO+p26.GIRASOL+p26.CEBADA+p26.SORGO;
+
             if (currentChartTab === 'main') {
                 lbls = ['SOJA', 'MAIZ', 'TRIGO'];
                 data25 = [p25.SOJA, p25.MAIZ, p25.TRIGO];
@@ -2886,8 +2890,10 @@ ${totalsRow}
                     ChartProd.data.labels = lbls;
                     ChartProd.data.datasets[0].data = data25;
                     ChartProd.data.datasets[0].backgroundColor = colors25;
+                    ChartProd.data.datasets[0].totalEmpresa = totalProd25;
                     ChartProd.data.datasets[1].data = data26;
                     ChartProd.data.datasets[1].backgroundColor = colors26;
+                    ChartProd.data.datasets[1].totalEmpresa = totalProd26;
                     ChartProd.update();
                 } else {
                     ChartProd = new Chart(ctx.getContext('2d'), {
@@ -2895,8 +2901,8 @@ ${totalsRow}
                         data: {
                             labels: lbls,
                             datasets: [
-                                { label: '2025 (YTD)', data: data25, backgroundColor: colors25, borderRadius: 4, barPercentage: 0.75, categoryPercentage: 0.8 },
-                                { label: '2026', data: data26, backgroundColor: colors26, borderRadius: 4, barPercentage: 0.75, categoryPercentage: 0.8 }
+                                { label: '2025 (YTD)', data: data25, backgroundColor: colors25, borderRadius: 4, barPercentage: 0.75, categoryPercentage: 0.8, totalEmpresa: totalProd25 },
+                                { label: '2026', data: data26, backgroundColor: colors26, borderRadius: 4, barPercentage: 0.75, categoryPercentage: 0.8, totalEmpresa: totalProd26 }
                             ]
                         },
                         options: {
@@ -2915,7 +2921,7 @@ ${totalsRow}
                                         innerPerc: {
                                             color: '#1e293b', font: { weight: '900', size: 11 }, anchor: 'center', align: 'center',
                                             formatter: (val, ctx) => {
-                                                let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                                let sum = ctx.dataset.totalEmpresa || ctx.dataset.data.reduce((a, b) => a + b, 0);
                                                 if(sum === 0 || val === 0) return '';
                                                 return ((val / sum) * 100).toFixed(0) + '%';
                                             }
@@ -2983,8 +2989,15 @@ ${totalsRow}
             updateHarvestStrip(context, isRepOrClientFiltered);
             
             const d26=context.filter(d=>d.e.includes('26'));
+            // VOLUMEN: incluye TODAS las operaciones 2026, tambien todo Tittaferrante
             const v26=d26.reduce((a,b)=>a+b.vol,0);
-            const cuits=new Set(d26.filter(d=>d.r!=='ANDRES TITTAFERRANTE').map(d=>d.cuitLimpio||d.cuit).filter(c=>c)).size;
+            // CUENTAS: de Tittaferrante se cuenta SOLO Syngenta Agro (CUIT 30646328450); el resto de sus cuentas no cuentan
+            const SYNGENTA_TITTA_CUIT='30646328450';
+            const cuentaTitta=(d)=>{
+                if(d.r!=='ANDRES TITTAFERRANTE') return true;
+                return (d.cuitLimpio||d.cuit)===SYNGENTA_TITTA_CUIT;
+            };
+            const cuits=new Set(d26.filter(cuentaTitta).map(d=>d.cuitLimpio||d.cuit).filter(c=>c)).size;
             
             document.getElementById('kVol26').innerText=v26.toLocaleString('de-DE',{maximumFractionDigits:0})+" Tn";
             document.getElementById('kCuit26').innerText=cuits+" Ctas";
