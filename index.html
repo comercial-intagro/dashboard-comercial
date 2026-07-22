@@ -1432,6 +1432,7 @@
         // Fase 2 - multi-usuario: rol y representante del usuario actual
         let USER_ROL = 'GERENCIAL';
         let USER_REPRESENTANTE = '';
+        let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
         let selectedYear='all', activeProfileFilter='all', maxDateInDB=null, dynamicCurrentMonth=3;
         // Estado de ordenamiento de la grilla de presupuesto
         let budgetSortKey = 'target', budgetSortDir = 'desc';
@@ -1757,6 +1758,13 @@
                     // Rol del usuario (Fase 2 - multi-usuario). Default GERENCIAL por compatibilidad.
                     USER_ROL = (payload.rol || 'GERENCIAL').toString().toUpperCase();
                     USER_REPRESENTANTE = (payload.representante || '').toString().toUpperCase();
+                    // Fecha de actualización del DB GENERAL (para que los cálculos temporales
+                    // sean iguales para todos, sin importar la última operación del usuario).
+                    GLOBAL_MAX_DATE = null;
+                    if (payload.maxDateGeneral) {
+                        const gd = new Date(payload.maxDateGeneral);
+                        if (!isNaN(gd.getTime())) GLOBAL_MAX_DATE = gd;
+                    }
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
                     if (payload.sio2026 && Array.isArray(payload.sio2026) && payload.sio2026.length > 1) {
                         try {
@@ -1929,7 +1937,11 @@
                 return acc;
             },[]);
 
-            maxDateInDB=latestDate;
+            // Fecha de referencia para TODOS los cálculos temporales (días restantes,
+            // objetivo diario, plan estacional). Si el backend mandó la fecha del DB
+            // general, se usa esa, para que un repre calcule con la misma fecha que la
+            // vista gerencial (aunque su última operación sea anterior).
+            maxDateInDB = (GLOBAL_MAX_DATE && !isNaN(GLOBAL_MAX_DATE.getTime())) ? GLOBAL_MAX_DATE : latestDate;
             if(maxDateInDB){
                 let maxY=maxDateInDB.getFullYear();
                 let maxM_index=maxDateInDB.getMonth();
