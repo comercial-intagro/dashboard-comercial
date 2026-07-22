@@ -957,7 +957,7 @@
                 </div>
             </div>
             <div class="filters">
-                <div class="filter-group">
+                <div class="filter-group" id="filterGroupRepre">
                     <label class="filter-label">Repre/ Comercial</label>
                     <div class="custom-select-container" id="customRepSelect">
                         <input type="hidden" id="fRep" value="all">
@@ -1008,7 +1008,7 @@
                 <button class="btn-clean" onclick="resetFilters()">
                     <i class="ri-refresh-line"></i> Limpiar Filtros
                 </button>
-                <div class="tools-section">
+                <div class="tools-section" id="toolsSection">
                     <label class="filter-label">HERRAMIENTAS</label>
                     <button class="btn-sec" onclick="toggleModal('budgetModal',true)"><i class="ri-bar-chart-2-fill"></i> Presupuesto 2026</button>
                     <button class="btn-sec" onclick="toggleModal('harvestModal',true)"><i class="ri-plant-fill"></i> Ver Cosechas</button>
@@ -1429,6 +1429,9 @@
 
         // VARIABLES GLOBALES
         let DB=[], ChartProd=null, ChartHarvest=null;
+        // Fase 2 - multi-usuario: rol y representante del usuario actual
+        let USER_ROL = 'GERENCIAL';
+        let USER_REPRESENTANTE = '';
         let selectedYear='all', activeProfileFilter='all', maxDateInDB=null, dynamicCurrentMonth=3;
         // Estado de ordenamiento de la grilla de presupuesto
         let budgetSortKey = 'target', budgetSortDir = 'desc';
@@ -1751,6 +1754,9 @@
                         showCriticalError("El servidor respondió, pero no hay datos.");
                         return;
                     }
+                    // Rol del usuario (Fase 2 - multi-usuario). Default GERENCIAL por compatibilidad.
+                    USER_ROL = (payload.rol || 'GERENCIAL').toString().toUpperCase();
+                    USER_REPRESENTANTE = (payload.representante || '').toString().toUpperCase();
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
                     if (payload.sio2026 && Array.isArray(payload.sio2026) && payload.sio2026.length > 1) {
                         try {
@@ -1949,6 +1955,7 @@
                 document.getElementById('loader').style.display='none';
                 const dash=document.getElementById('dashboard');
                 dash.style.display='flex';
+                applyRolePermissions();
                 initFilters();
                 fillBudgetTable();
                 
@@ -2960,6 +2967,49 @@ ${totalsRow}
             }
         }
 
+        // ============================================================
+        // FASE 2 - Adaptación de la interfaz según el rol del usuario
+        // ============================================================
+        function applyRolePermissions(){
+            const esGerencial = (USER_ROL === 'GERENCIAL');
+
+            if (esGerencial) {
+                // Gerencial: ve todo, no se oculta nada.
+                return;
+            }
+
+            // --- Rol REPRESENTANTE / COMERCIAL: ve solo lo suyo ---
+
+            // 1. Ocultar la sección de HERRAMIENTAS (modales de mercado)
+            const tools = document.getElementById('toolsSection');
+            if (tools) tools.style.display = 'none';
+
+            // 2. Ocultar el selector Repre/Comercial (queda anclado a su representante)
+            const repGroup = document.getElementById('filterGroupRepre');
+            if (repGroup) repGroup.style.display = 'none';
+
+            // 3. Anclar el filtro al representante del usuario.
+            //    El backend ya solo manda sus filas, pero fijamos el filtro por coherencia visual.
+            const fRep = document.getElementById('fRep');
+            if (fRep) fRep.value = 'all'; // 'all' porque su DB ya está filtrada; muestra todo lo que recibió (que es solo suyo)
+
+            // 4. Ocultar el bloque Rep/Com/Bahía Blanca (comparativo de empresa)
+            //    y mantener las cosechas visibles. La función updateHarvestStrip
+            //    controla esto; forzamos que oculte rep/com/obb.
+            const repCard = document.querySelector('.g-rep');
+            const comCard = document.querySelector('.g-com');
+            const obbCard = document.querySelector('.g-obb');
+            if (repCard) repCard.style.display = 'none';
+            if (comCard) comCard.style.display = 'none';
+            if (obbCard) obbCard.style.display = 'none';
+
+            // 5. Personalizar el título del dashboard con el nombre del representante
+            const titleEl = document.querySelector('.dashboard-title');
+            if (titleEl && USER_REPRESENTANTE) {
+                titleEl.innerHTML = '<i class="ri-dashboard-3-line"></i> MI DASHBOARD - ' + USER_REPRESENTANTE;
+            }
+        }
+
         function runEngine(){
             fillBudgetTable();
             const fr=document.getElementById('fRep').value, fv=document.getElementById('fVend').value, fp=document.getElementById('fProd').value;
@@ -3212,7 +3262,9 @@ ${totalsRow}
             const clientBox = document.querySelector('.client-analysis-box');
 
             // Bloque Rep/Com/Obb: SOLO visible en "Toda la Empresa" (se oculta al filtrar por repre/comercial)
-            const dispRepComObb = isFiltered ? 'none' : 'flex';
+            // Además: si el usuario NO es gerencial, nunca se muestra (es comparativo de empresa).
+            const esGerencial = (USER_ROL === 'GERENCIAL');
+            const dispRepComObb = (isFiltered || !esGerencial) ? 'none' : 'flex';
             if (repCard) repCard.style.display = dispRepComObb;
             if (comCard) comCard.style.display = dispRepComObb;
             if (obbCard) obbCard.style.display = dispRepComObb;
@@ -4062,6 +4114,12 @@ ${totalsRow}
         }
 
         function toggleModal(id, show) {
+            // Seguridad Fase 2: los modales de mercado/herramientas son solo para gerenciales.
+            // Si un no-gerencial intenta abrir uno (incluso por consola), se bloquea.
+            const modalesGerenciales = ['budgetModal','harvestModal','historyModal','canjModal','sioModal','prodNacModal'];
+            if (show && USER_ROL !== 'GERENCIAL' && modalesGerenciales.indexOf(id) !== -1) {
+                return;
+            }
             const modal = document.getElementById(id);
             if(modal) modal.style.display = show ? 'flex' : 'none';
             // Hooks específicos al abrir el modal SIO
