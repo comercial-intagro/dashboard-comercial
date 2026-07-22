@@ -1762,8 +1762,16 @@
                     // sean iguales para todos, sin importar la última operación del usuario).
                     GLOBAL_MAX_DATE = null;
                     if (payload.maxDateGeneral) {
-                        const gd = new Date(payload.maxDateGeneral);
-                        if (!isNaN(gd.getTime())) GLOBAL_MAX_DATE = gd;
+                        // Parsear "YYYY-MM-DD" como fecha LOCAL (no UTC), para que en
+                        // Argentina (GMT-3) no se corra un día para atrás.
+                        let gd = null;
+                        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(payload.maxDateGeneral.toString().trim());
+                        if (m) {
+                            gd = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10));
+                        } else {
+                            gd = new Date(payload.maxDateGeneral);
+                        }
+                        if (gd && !isNaN(gd.getTime())) GLOBAL_MAX_DATE = gd;
                     }
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
                     if (payload.sio2026 && Array.isArray(payload.sio2026) && payload.sio2026.length > 1) {
