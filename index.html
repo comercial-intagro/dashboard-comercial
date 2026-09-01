@@ -1865,6 +1865,8 @@
 
         function processParsedData(dataArray,keys){
             if(dataArray.length===0){alert("El archivo de Google Sheets parece estar vacío.");return;}
+            window.__headers = keys; // diagnóstico temporal: nombres exactos de columnas
+            window.__sampleRow = dataArray[0]; // fila de ejemplo con todas las columnas
             const findKey=(term)=>keys.find(k=>k.toUpperCase().trim().includes(term));
             const findExact=(term)=>keys.find(k=>k.toUpperCase().trim()===term);
             const colDate=findKey('FECHA')||'FECHA';
