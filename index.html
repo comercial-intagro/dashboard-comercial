@@ -1880,6 +1880,11 @@
             const colCuitComp=findExact('CUIT COMPRADOR')||findKey('CUIT COMP')||'CUIT COMPRADOR';
             const colComp=findExact('COMPRADOR')||findKey('COMPRADOR')||'Comprador';
             const colNroVend=findExact('NRO. VENDEDOR')||findExact('NRO VENDEDOR')||findKey('NRO')||'NRO. VENDEDOR';
+            const colDestino=findExact('DESTINO')||findKey('DESTINO')||'Destino';
+            const colMoneda=findExact('MONEDA')||findKey('MONEDA')||'Moneda';
+            const colPrecio=findExact('PRECIO')||findKey('PRECIO')||'Precio';
+            const colCondicion=findExact('CONDICION')||findKey('CONDICION')||'CONDICION';
+            const colTipoNeg=findExact('TIPO DE NEGOCIO')||findKey('TIPO DE NEGOCIO')||findKey('TIPO NEGOCIO')||'TIPO DE NEGOCIO';
 
             let latestDate=new Date(2020,0,1);
             
@@ -1942,7 +1947,12 @@
                     comprador: (row[colComp]||'').toString().trim(),
                     cat: catProd,
                     vol:tn,
-                    h:(row[colCos]||'').trim()
+                    h:(row[colCos]||'').trim(),
+                    destino:(row[colDestino]||'').toString().trim(),
+                    moneda:(row[colMoneda]||'').toString().trim(),
+                    precio:(row[colPrecio]||'').toString().trim(),
+                    condicion:(row[colCondicion]||'').toString().trim(),
+                    tipoNeg:(row[colTipoNeg]||'').toString().trim()
                 });
                 return acc;
             },[]);
