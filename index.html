@@ -3082,11 +3082,10 @@ ${totalsRow}
                 sw.classList.toggle('mode-vendedor', VIEW_MODE === 'vendedor');
                 sw.classList.toggle('mode-comprador', VIEW_MODE === 'comprador');
             }
-            // Resetear filtros al cambiar de modo
-            if (typeof resetFilters === 'function') resetFilters();
-            // Fase 2: el switch solo se mueve visualmente (instantáneo, sin recálculo).
-            // En la Fase 3, el cambio de vista usará contenido PRE-CALCULADO al cargar,
-            // para que el salto vendedor<->comprador siga siendo instantáneo.
+            // Fase 2: el switch solo se mueve visualmente (instantáneo, sin recálculo
+            // ni reseteo de filtros). En la Fase 3, el cambio de vista usará contenido
+            // PRE-CALCULADO al cargar, para que el salto siga siendo instantáneo, y el
+            // reseteo de filtros se hará ahí sin reprocesar toda la base.
         }
 
         function applyRolePermissions(){
