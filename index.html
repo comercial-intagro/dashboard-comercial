@@ -1018,8 +1018,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="filter-group">
-                    <label class="filter-label">Vendedor</label>
+                <div class="filter-group" id="filterGroupVend">
+                    <label class="filter-label" id="labelVendComp">Vendedor</label>
                     <div class="custom-select-container" id="customVendSelect">
                         <input type="hidden" id="fVend" value="all">
                         <div class="custom-select-trigger" onclick="toggleVendDropdown(event)">
@@ -1033,6 +1033,25 @@
                                 </div>
                             </div>
                             <div class="custom-select-options" id="vendOptionsList"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Filtro de COMPRADOR (vista compradora, oculto en vendedor) -->
+                <div class="filter-group" id="filterGroupComp" style="display:none;">
+                    <label class="filter-label">Comprador</label>
+                    <div class="custom-select-container">
+                        <input type="hidden" id="fComp" value="all">
+                        <div class="custom-select-trigger" onclick="toggleCompDropdown(event)">
+                            <span id="compTriggerText">Todos</span>
+                        </div>
+                        <div class="custom-select-dropdown" id="compDropdown">
+                            <div class="vend-search-box">
+                                <div style="position:relative;">
+                                    <i class="ri-search-line" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.7rem;"></i>
+                                    <input type="text" id="compSearchInput" placeholder="Buscar comprador..." onkeyup="filterCompOptions(event)" onclick="event.stopPropagation()">
+                                </div>
+                            </div>
+                            <div class="custom-select-options" id="compOptionsList"></div>
                         </div>
                     </div>
                 </div>
@@ -2494,7 +2513,8 @@
             document.getElementById('fProd').value = val;
             document.getElementById('prodTriggerText').innerText = name;
             document.getElementById('prodDropdown').classList.remove('show');
-            runEngine();
+            if (VIEW_MODE === 'comprador') { renderVistaCompradora(); }
+            else { runEngine(); }
         }
 
         function resetFilters() {
@@ -2544,6 +2564,10 @@
             const containerProd = document.getElementById('customProdSelect');
             const dropProd = document.getElementById('prodDropdown');
             if(containerProd && !containerProd.contains(e.target) && dropProd && dropProd.classList.contains('show')) dropProd.classList.remove('show');
+
+            const dropComp = document.getElementById('compDropdown');
+            const fgComp = document.getElementById('filterGroupComp');
+            if(fgComp && !fgComp.contains(e.target) && dropComp && dropComp.classList.contains('show')) dropComp.classList.remove('show');
         });
 
         function initFilters(){
@@ -2983,7 +3007,22 @@ ${totalsRow}
 
         function renderProductChart() {
             if (!lastDashboardData || lastDashboardData.length === 0) return;
-            const data = lastDashboardData;
+            // En modo comprador, usar el universo comprador (DB_FULL sin Argentrading comprador);
+            // en vendedor, usar lastDashboardData como siempre.
+            let data;
+            if (VIEW_MODE === 'comprador') {
+                var ARGC = '30711629048';
+                var base = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
+                var fpChart = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
+                data = base.filter(function(d){
+                    var cc = String(d.cuitComp||'').replace(/\D/g,'');
+                    if (!cc || cc === ARGC) return false;
+                    if (fpChart !== 'all' && d.cat !== fpChart) return false;
+                    return true;
+                });
+            } else {
+                data = lastDashboardData;
+            }
 
             let maxDate2025 = null;
             if (maxDateInDB) {
@@ -3131,9 +3170,27 @@ ${totalsRow}
             if (sidebar) sidebar.classList.toggle('mode-comprador', VIEW_MODE === 'comprador');
             // Renderizar la vista correspondiente (datos ya en DB/DB_FULL).
             if (VIEW_MODE === 'comprador') {
+                // Ocultar filtros de vendedor/repre, mostrar el de comprador
+                var fgRep = document.getElementById('filterGroupRepre');
+                var fgVend = document.getElementById('filterGroupVend');
+                var fgComp = document.getElementById('filterGroupComp');
+                if (fgRep) fgRep.style.display = 'none';
+                if (fgVend) fgVend.style.display = 'none';
+                if (fgComp) fgComp.style.display = '';
+                // Resetear el filtro de comprador
+                var fComp = document.getElementById('fComp');
+                if (fComp) fComp.value = 'all';
+                var compTxt = document.getElementById('compTriggerText');
+                if (compTxt) compTxt.innerText = 'Todos';
                 renderVistaCompradora();
             } else {
-                // Restaurar el HTML original de las tarjetas antes de que runEngine las rellene
+                // Volver a vendedor: mostrar filtros normales, ocultar el de comprador
+                var fgRep2 = document.getElementById('filterGroupRepre');
+                var fgVend2 = document.getElementById('filterGroupVend');
+                var fgComp2 = document.getElementById('filterGroupComp');
+                if (fgRep2) fgRep2.style.display = '';
+                if (fgVend2) fgVend2.style.display = '';
+                if (fgComp2) fgComp2.style.display = 'none';
                 restaurarTarjetasVendedor();
                 if (typeof runEngine === 'function') { try { runEngine(); } catch(e){ console.warn(e); } }
             }
@@ -3172,11 +3229,61 @@ ${totalsRow}
         }
 
         // Renderiza las tarjetas centrales en modo comprador (sub-paso 1).
+        // ============================================================
+        // Filtro de COMPRADOR (vista compradora)
+        // ============================================================
+        function toggleCompDropdown(e){
+            if(e) e.stopPropagation();
+            const drop = document.getElementById('compDropdown');
+            if (!drop) return;
+            drop.classList.toggle('show');
+            if(drop.classList.contains('show')){
+                var si = document.getElementById('compSearchInput');
+                if (si){ si.value=''; }
+                buildCompradorOptions();
+            }
+        }
+
+        function filterCompOptions(e){
+            var filter = (document.getElementById('compSearchInput').value||'').toUpperCase();
+            var opts = document.querySelectorAll('#compOptionsList .custom-select-option');
+            opts.forEach(function(o){
+                var t = o.textContent || o.innerText;
+                o.style.display = t.toUpperCase().indexOf(filter) > -1 ? '' : 'none';
+            });
+        }
+
+        function buildCompradorOptions(){
+            var cont = document.getElementById('compOptionsList');
+            if (!cont) return;
+            var r = calcularVistaCompradora(
+                document.getElementById('fProd') ? document.getElementById('fProd').value : 'all',
+                'all'
+            );
+            // Lista de compradores con volumen 2026, ordenada
+            var lista = r.listaCompradores.filter(function(c){ return c['2026']>0 || c['2025']>0 || c['2024']>0 || c['2023']>0; });
+            lista.sort(function(a,b){ return b['2026'] - a['2026']; });
+            var html = '<div class="custom-select-option" data-val="all" onclick="selectComp(\'all\',\'Todos\')">Todos</div>';
+            lista.forEach(function(c){
+                var nom = (c.nombre || c.cuit).replace(/'/g,"");
+                html += '<div class="custom-select-option" data-val="'+c.cuit+'" onclick="selectComp(\''+c.cuit+'\',\''+nom.replace(/"/g,'')+'\')">'+ (c.nombre||c.cuit) +'</div>';
+            });
+            cont.innerHTML = html;
+        }
+
+        function selectComp(cuit, nombre){
+            document.getElementById('fComp').value = cuit;
+            document.getElementById('compTriggerText').innerText = nombre;
+            var drop = document.getElementById('compDropdown');
+            if (drop) drop.classList.remove('show');
+            renderVistaCompradora();
+        }
+
         function renderVistaCompradora(){
             guardarTarjetasVendedor(); // asegura tener copia del original
             var r = calcularVistaCompradora(
                 document.getElementById('fProd') ? document.getElementById('fProd').value : 'all',
-                'all'
+                document.getElementById('fComp') ? document.getElementById('fComp').value : 'all'
             );
             var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
             var pct = function(part, tot){ return tot>0 ? (part/tot*100).toFixed(1)+'%' : '0%'; };
@@ -3330,6 +3437,63 @@ ${totalsRow}
                     tbody.appendChild(tr);
                 });
             }
+
+            // --- Gráfico de productos (usa datos comprador porque VIEW_MODE='comprador') ---
+            if (typeof renderProductChart === 'function') { try { renderProductChart(); } catch(e){ console.warn(e); } }
+
+            // --- Estacionalidad: solo volumen mensual del ejercicio 2026, resto vacío ---
+            renderEstacionalidadComprador(r);
+        }
+
+        // Estacionalidad en modo comprador: muestra el volumen mensual del ejercicio 2026,
+        // con las columnas de %Est, Plan, Desvío y Var% VACÍAS.
+        function renderEstacionalidadComprador(r){
+            var tbody = document.getElementById('execTableBody');
+            if (!tbody) return;
+            var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
+            // Volumen por mes del ejercicio 2026 (universo comprador)
+            var ARGC = '30711629048';
+            var base = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
+            var d26 = base.filter(function(d){
+                var cc = String(d.cuitComp||'').replace(/\D/g,'');
+                return cc && cc !== ARGC && d.e && d.e.indexOf('26')!==-1;
+            });
+            var porMes = {};
+            d26.forEach(function(d){
+                if (!d.f) return;
+                var mes = getMonthFromDate(d.f);
+                porMes[mes] = (porMes[mes]||0) + d.vol;
+            });
+            tbody.innerHTML = '';
+            var totalVol = 0;
+            CONSTANTS.FISCAL_ORDER.forEach(function(m){
+                var monthName = CONSTANTS.MONTH_NAMES[m];
+                var vol = porMes[m] || 0;
+                totalVol += vol;
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td style="text-align:left;">' + monthName + '</td>' +
+                    '<td style="text-align:center;">-</td>' +
+                    '<td style="text-align:right;">' + (vol>0?fmt(vol):'-') + '</td>' +
+                    '<td style="text-align:right;">-</td>' +
+                    '<td style="text-align:right;">-</td>' +
+                    '<td style="text-align:right;">-</td>' +
+                    '<td style="text-align:right;">-</td>';
+                tbody.appendChild(tr);
+            });
+            // Fila total
+            var trTot = document.createElement('tr');
+            trTot.style.fontWeight = '800';
+            trTot.style.borderTop = '2px solid #005C35';
+            trTot.innerHTML =
+                '<td style="text-align:left;">TOTAL</td>' +
+                '<td style="text-align:center;">-</td>' +
+                '<td style="text-align:right;">' + fmt(totalVol) + '</td>' +
+                '<td style="text-align:right;">-</td>' +
+                '<td style="text-align:right;">-</td>' +
+                '<td style="text-align:right;">-</td>' +
+                '<td style="text-align:right;">-</td>';
+            tbody.appendChild(trTot);
         }
 
         function applyRolePermissions(){
