@@ -3084,10 +3084,9 @@ ${totalsRow}
             }
             // Resetear filtros al cambiar de modo
             if (typeof resetFilters === 'function') resetFilters();
-            // Por ahora (Fase 2) solo cambiamos el modo visual del switch.
-            // La adaptación de los cálculos se implementa en la Fase 3.
-            // Re-render para reflejar el cambio (cuando esté la lógica comprador).
-            if (typeof runEngine === 'function') { try { runEngine(); } catch(e){ console.warn(e); } }
+            // Fase 2: el switch solo se mueve visualmente (instantáneo, sin recálculo).
+            // En la Fase 3, el cambio de vista usará contenido PRE-CALCULADO al cargar,
+            // para que el salto vendedor<->comprador siga siendo instantáneo.
         }
 
         function applyRolePermissions(){
