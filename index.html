@@ -3142,6 +3142,75 @@ ${totalsRow}
             }
         }
 
+        // ============================================================
+        // FASE 3 vista compradora - Motor de cálculo (validación por consola)
+        // Calcula todo el lado comprador. No toca la interfaz todavía.
+        // ============================================================
+        function calcularVistaCompradora(fProdFiltro, fCompFiltro){
+            fProdFiltro = fProdFiltro || 'all';
+            fCompFiltro = fCompFiltro || 'all';
+            const ARGENTRADING_CUIT = '30711629048';
+
+            // Universo: excluir Argentrading COMPRADOR; aplicar filtros de producto y comprador
+            const universo = DB.filter(d => {
+                const cuitC = String(d.cuitComp||'').replace(/\D/g,'');
+                if (!cuitC) return false;                    // sin cuit comprador, no cuenta
+                if (cuitC === ARGENTRADING_CUIT) return false; // excluir Argentrading comprador
+                if (fProdFiltro !== 'all' && d.cat !== fProdFiltro) return false;
+                if (fCompFiltro !== 'all' && cuitC !== fCompFiltro) return false;
+                return true;
+            });
+
+            // Categoría de un comprador (colapsada a 4, Otros por defecto)
+            function catDe(cuitC){ return CATEG_COMPRADORES[cuitC] || 'Otros'; }
+
+            // --- Volumen y cuentas por ejercicio ---
+            const porEjercicio = {}; // ejercicio -> {vol, cuits:Set}
+            universo.forEach(d => {
+                const e = d.e || '(s/e)';
+                if (!porEjercicio[e]) porEjercicio[e] = { vol:0, cuits:new Set() };
+                porEjercicio[e].vol += d.vol;
+                porEjercicio[e].cuits.add(String(d.cuitComp||'').replace(/\D/g,''));
+            });
+
+            // --- Ejercicio 2026: total, Argentrading vendedor, Directos ---
+            const d26 = universo.filter(d => d.e && d.e.indexOf('26') !== -1);
+            const vol26Total = d26.reduce((a,b)=>a+b.vol,0);
+            // Argentrading VENDEDOR: nombre contiene ARGENTRADING y CUIT vendedor = argentrading
+            const volArgVend = d26.filter(d => {
+                const v = (d.v||'').toUpperCase();
+                const cuitV = String(d.cuitLimpio||d.cuit||'').replace(/\D/g,'');
+                return v.indexOf('ARGENTRADING') !== -1 && cuitV === ARGENTRADING_CUIT;
+            }).reduce((a,b)=>a+b.vol,0);
+            const volDirectos = vol26Total - volArgVend;
+
+            // --- 4 tarjetas de categoría (ejercicio 2026) ---
+            const porCategoria = { 'Exportacion':0, 'Molino':0, 'Consumo':0, 'Otros':0 };
+            d26.forEach(d => {
+                const cuitC = String(d.cuitComp||'').replace(/\D/g,'');
+                porCategoria[catDe(cuitC)] += d.vol;
+            });
+
+            // --- Cosechas (vol + cuentas compradoras) ---
+            const porCosecha = {}; // cosecha -> {vol, cuits:Set}
+            universo.forEach(d => {
+                const h = d.h || '(s/c)';
+                if (!porCosecha[h]) porCosecha[h] = { vol:0, cuits:new Set() };
+                porCosecha[h].vol += d.vol;
+                porCosecha[h].cuits.add(String(d.cuitComp||'').replace(/\D/g,''));
+            });
+
+            return {
+                universo: universo.length,
+                porEjercicio: porEjercicio,
+                vol26Total: vol26Total,
+                volArgVend: volArgVend,
+                volDirectos: volDirectos,
+                porCategoria: porCategoria,
+                porCosecha: porCosecha
+            };
+        }
+
         function runEngine(){
             fillBudgetTable();
             const fr=document.getElementById('fRep').value, fv=document.getElementById('fVend').value, fp=document.getElementById('fProd').value;
