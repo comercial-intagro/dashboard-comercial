@@ -3218,6 +3218,57 @@ ${totalsRow}
             setCateg('categMolVal','categMolPerc', r.porCategoria['Molino']||0);
             setCateg('categConsVal','categConsPerc', r.porCategoria['Consumo']||0);
             setCateg('categOtrVal','categOtrPerc', r.porCategoria['Otros']||0);
+
+            // --- Tarjetas de ejercicio histórico (2021-2025) con cuentas compradoras ---
+            var lastVol = 0;
+            ['2021','2022','2023','2024','2025'].forEach(function(y){
+                var d = r.porEjercicio[y];
+                var vol = d ? d.vol : 0;
+                var cuits = d ? d.cuits.size : 0;
+                var card = document.getElementById('y'+y);
+                if (card) {
+                    card.querySelector('.y-val').innerText = vol > 0 ? fmt(vol) + ' Tn' : '-';
+                    card.querySelector('.y-cuentas').innerText = cuits > 0 ? cuits + ' Ctas' : '- Ctas';
+                    var shareEl = card.querySelector('.y-share');
+                    if (shareEl) shareEl.innerHTML = ''; // sin Share Sio en comprador
+                    var badge = document.getElementById('b'+y);
+                    if (badge) {
+                        if (lastVol > 0 && vol > 0) {
+                            var perc = ((vol - lastVol) / lastVol) * 100;
+                            badge.style.display = 'block';
+                            if (perc > 0) { badge.className='y-badge trend-up'; badge.innerHTML='<i class="ri-arrow-right-up-line"></i> '+perc.toFixed(1)+'%'; badge.style.background='#dcfce7'; badge.style.color='#16a34a'; }
+                            else { badge.className='y-badge trend-down'; badge.innerHTML='<i class="ri-arrow-right-down-line"></i> '+Math.abs(perc).toFixed(1)+'%'; badge.style.background='#fee2e2'; badge.style.color='#dc2626'; }
+                        } else { badge.style.display='none'; }
+                    }
+                }
+                lastVol = vol;
+            });
+
+            // --- Tarjetas de cosecha (22/23 a 26/27) con cuentas compradoras ---
+            var displayCos = ['22/23','23/24','24/25','25/26','26/27'];
+            var prevCos = '21/22';
+            function volCos(h){ return r.porCosecha[h] ? r.porCosecha[h].vol : 0; }
+            function ctasCos(h){ return r.porCosecha[h] ? r.porCosecha[h].cuits.size : 0; }
+            displayCos.forEach(function(h){
+                var cardId = h.replace('/','');
+                var card = document.getElementById('hc'+cardId);
+                if (card) {
+                    var vol = volCos(h);
+                    var prevVol = volCos(prevCos);
+                    card.querySelector('.y-val').innerText = vol > 0 ? fmt(vol) + ' Tn' : '-';
+                    card.querySelector('.y-cuentas').innerText = ctasCos(h) > 0 ? ctasCos(h) + ' Ctas' : '- Ctas';
+                    var badge = document.getElementById('hb'+cardId);
+                    if (badge) {
+                        if (prevVol > 0 && vol > 0) {
+                            var perc = ((vol - prevVol) / prevVol) * 100;
+                            badge.style.display = 'block';
+                            if (perc > 0) { badge.className='y-badge trend-up'; badge.innerHTML='<i class="ri-arrow-right-up-line"></i> '+perc.toFixed(1)+'%'; badge.style.background='#dcfce7'; badge.style.color='#16a34a'; }
+                            else { badge.className='y-badge trend-down'; badge.innerHTML='<i class="ri-arrow-right-down-line"></i> '+Math.abs(perc).toFixed(1)+'%'; badge.style.background='#fee2e2'; badge.style.color='#dc2626'; }
+                        } else { badge.style.display='none'; }
+                    }
+                }
+                prevCos = h;
+            });
         }
 
         function applyRolePermissions(){
