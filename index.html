@@ -300,6 +300,13 @@
         .g-rep   { grid-column: 1; grid-row: 2; align-self: start; }
         .g-com   { grid-column: 2; grid-row: 2; align-self: start; }
         .g-obb   { grid-column: 3; grid-row: 2; align-self: start; }
+        /* Vista compradora: contenedor de las 4 tarjetas de categoría ocupa toda la fila 2 */
+        .categ-cards-container {
+            grid-column: 1 / 4; grid-row: 2;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 0.8vh, 12px);
+            align-self: start;
+        }
+        .categ-card .sm-body { margin-top: 4px; }
 
         .card {
             background: var(--bg-card); padding: 1vh 1vw; border-radius: var(--radius-lg);
@@ -1159,6 +1166,26 @@
                                 <div class="sm-perc" id="txtOBBPerc">0%</div>
                             </div>
                             <div class="sm-progress-bg"><div class="sm-progress-fill" id="barOBB"></div></div>
+                        </div>
+
+                        <!-- Vista compradora: 4 tarjetas de categoría (ocultas en vendedor) -->
+                        <div class="categ-cards-container" id="categCardsContainer" style="display:none;">
+                            <div class="sm-card categ-card" id="categExportacion">
+                                <div class="sm-header"><div class="sm-title"><i class="ri-ship-line sm-icon"></i> Exportación</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categExpVal">0 Tn</div><div class="sm-perc" id="categExpPerc">0%</div></div>
+                            </div>
+                            <div class="sm-card categ-card" id="categMolino">
+                                <div class="sm-header"><div class="sm-title"><i class="ri-building-2-line sm-icon"></i> Molino</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categMolVal">0 Tn</div><div class="sm-perc" id="categMolPerc">0%</div></div>
+                            </div>
+                            <div class="sm-card categ-card" id="categConsumo">
+                                <div class="sm-header"><div class="sm-title"><i class="ri-restaurant-line sm-icon"></i> Consumo</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categConsVal">0 Tn</div><div class="sm-perc" id="categConsPerc">0%</div></div>
+                            </div>
+                            <div class="sm-card categ-card" id="categOtros">
+                                <div class="sm-header"><div class="sm-title"><i class="ri-more-2-line sm-icon"></i> Otros</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categOtrVal">0 Tn</div><div class="sm-perc" id="categOtrPerc">0%</div></div>
+                            </div>
                         </div>
 
                         <div class="harvest-strip g-harvest-strip" id="harvestStripMain">
@@ -3128,6 +3155,13 @@ ${totalsRow}
             if (o && _htmlObjOrig !== null) o.innerHTML = _htmlObjOrig;
             var shareSioBadge = document.getElementById('shareSioBadge');
             if (shareSioBadge) shareSioBadge.style.display = '';
+            // Mostrar rep/com/obb de nuevo y ocultar las tarjetas de categoría
+            ['g-rep','g-com','g-obb'].forEach(function(cls){
+                var el = document.querySelector('.' + cls);
+                if (el) el.style.display = '';
+            });
+            var categCont = document.getElementById('categCardsContainer');
+            if (categCont) categCont.style.display = 'none';
         }
 
         // Renderiza las tarjetas centrales en modo comprador (sub-paso 1).
@@ -3168,6 +3202,22 @@ ${totalsRow}
                         '<div style="font-size:0.7rem; color:#64748b; font-weight:800; margin-top:6px;">' + pct(r.volDirectos, r.vol26Total) + ' del total</div>' +
                     '</div>';
             }
+
+            // --- 4 tarjetas de categoría: ocultar rep/com/obb, mostrar categorías ---
+            ['g-rep','g-com','g-obb'].forEach(function(cls){
+                var el = document.querySelector('.' + cls);
+                if (el) el.style.display = 'none';
+            });
+            var categCont = document.getElementById('categCardsContainer');
+            if (categCont) categCont.style.display = 'grid';
+            function setCateg(idVal, idPerc, valor){
+                var v = document.getElementById(idVal); if (v) v.innerText = fmt(valor) + ' Tn';
+                var p = document.getElementById(idPerc); if (p) p.innerText = pct(valor, r.vol26Total);
+            }
+            setCateg('categExpVal','categExpPerc', r.porCategoria['Exportacion']||0);
+            setCateg('categMolVal','categMolPerc', r.porCategoria['Molino']||0);
+            setCateg('categConsVal','categConsPerc', r.porCategoria['Consumo']||0);
+            setCateg('categOtrVal','categOtrPerc', r.porCategoria['Otros']||0);
         }
 
         function applyRolePermissions(){
