@@ -3102,10 +3102,72 @@ ${totalsRow}
             // Cambiar color del sidebar según el modo (verde=vendedor, gris=comprador)
             const sidebar = document.querySelector('.sidebar');
             if (sidebar) sidebar.classList.toggle('mode-comprador', VIEW_MODE === 'comprador');
-            // Fase 2: el switch solo se mueve visualmente (instantáneo, sin recálculo
-            // ni reseteo de filtros). En la Fase 3, el cambio de vista usará contenido
-            // PRE-CALCULADO al cargar, para que el salto siga siendo instantáneo, y el
-            // reseteo de filtros se hará ahí sin reprocesar toda la base.
+            // Renderizar la vista correspondiente (datos ya en DB/DB_FULL).
+            if (VIEW_MODE === 'comprador') {
+                renderVistaCompradora();
+            } else {
+                // Restaurar el HTML original de las tarjetas antes de que runEngine las rellene
+                restaurarTarjetasVendedor();
+                if (typeof runEngine === 'function') { try { runEngine(); } catch(e){ console.warn(e); } }
+            }
+        }
+
+        // Guarda una copia del HTML original de las tarjetas que la vista compradora modifica,
+        // para poder restaurarlas al volver a vendedor.
+        let _htmlAvanOrig = null, _htmlObjOrig = null;
+        function guardarTarjetasVendedor(){
+            var a = document.querySelector('.g-avan');
+            var o = document.querySelector('.g-obj');
+            if (a && _htmlAvanOrig === null) _htmlAvanOrig = a.innerHTML;
+            if (o && _htmlObjOrig === null) _htmlObjOrig = o.innerHTML;
+        }
+        function restaurarTarjetasVendedor(){
+            var a = document.querySelector('.g-avan');
+            var o = document.querySelector('.g-obj');
+            if (a && _htmlAvanOrig !== null) a.innerHTML = _htmlAvanOrig;
+            if (o && _htmlObjOrig !== null) o.innerHTML = _htmlObjOrig;
+            var shareSioBadge = document.getElementById('shareSioBadge');
+            if (shareSioBadge) shareSioBadge.style.display = '';
+        }
+
+        // Renderiza las tarjetas centrales en modo comprador (sub-paso 1).
+        function renderVistaCompradora(){
+            guardarTarjetasVendedor(); // asegura tener copia del original
+            var r = calcularVistaCompradora(
+                document.getElementById('fProd') ? document.getElementById('fProd').value : 'all',
+                'all'
+            );
+            var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
+            var pct = function(part, tot){ return tot>0 ? (part/tot*100).toFixed(1)+'%' : '0%'; };
+
+            var kVol26 = document.getElementById('kVol26');
+            if (kVol26) kVol26.innerText = fmt(r.vol26Total) + ' Tn';
+            var kCuit26 = document.getElementById('kCuit26');
+            if (kCuit26 && r.porEjercicio['2026']) kCuit26.innerText = r.porEjercicio['2026'].cuits.size + ' Ctas';
+            var kVol25YTD = document.getElementById('kVol25YTD');
+            if (kVol25YTD) kVol25YTD.innerHTML = '';
+            var shareSioBadge = document.getElementById('shareSioBadge');
+            if (shareSioBadge) shareSioBadge.style.display = 'none';
+
+            var cardAvan = document.querySelector('.g-avan');
+            if (cardAvan) {
+                cardAvan.innerHTML =
+                    '<div class="kpi-lbl">TOTAL VENTAS ARGENTRADING</div>' +
+                    '<div class="kpi-main-area" style="flex-direction:column; align-items:flex-start; justify-content:center; flex:1;">' +
+                        '<div class="kpi-val val-primary" style="line-height:1;">' + fmt(r.volArgVend) + ' Tn</div>' +
+                        '<div style="font-size:0.7rem; color:#64748b; font-weight:800; margin-top:6px;">' + pct(r.volArgVend, r.vol26Total) + ' del total</div>' +
+                    '</div>';
+            }
+
+            var cardObj = document.querySelector('.g-obj');
+            if (cardObj) {
+                cardObj.innerHTML =
+                    '<div class="kpi-lbl">TOTAL VENTAS DIRECTAS</div>' +
+                    '<div class="kpi-main-area" style="flex-direction:column; align-items:flex-start; justify-content:center; flex:1;">' +
+                        '<div class="kpi-val" style="line-height:1; color:var(--text-main);">' + fmt(r.volDirectos) + ' Tn</div>' +
+                        '<div style="font-size:0.7rem; color:#64748b; font-weight:800; margin-top:6px;">' + pct(r.volDirectos, r.vol26Total) + ' del total</div>' +
+                    '</div>';
+            }
         }
 
         function applyRolePermissions(){
