@@ -3162,6 +3162,13 @@ ${totalsRow}
             });
             var categCont = document.getElementById('categCardsContainer');
             if (categCont) categCont.style.display = 'none';
+            // Restaurar títulos de la grilla de cartera
+            var thName = document.getElementById('th-name');
+            if (thName) thName.innerHTML = 'Cliente / Vendedor <span></span>';
+            var thShare = document.getElementById('th-share');
+            if (thShare) thShare.innerHTML = 'Share Rep. <span></span>';
+            var clientHeader = document.querySelector('.client-header > div:first-child');
+            if (clientHeader) clientHeader.innerHTML = '<i class="ri-contacts-book-2-line" style="font-size:1rem;"></i> EVOLUCIÓN DE CARTERA (CLIENTES)';
         }
 
         // Renderiza las tarjetas centrales en modo comprador (sub-paso 1).
@@ -3269,6 +3276,60 @@ ${totalsRow}
                 }
                 prevCos = h;
             });
+
+            // --- Grilla de compradores ---
+            // Cambiar título de la columna a "Cliente Comprador" y el de Share
+            var thName = document.getElementById('th-name');
+            if (thName) thName.innerHTML = 'Cliente Comprador <span></span>';
+            var thShare = document.getElementById('th-share');
+            if (thShare) thShare.innerHTML = 'Share <span></span>';
+            var clientHeader = document.querySelector('.client-header > div:first-child');
+            if (clientHeader) clientHeader.innerHTML = '<i class="ri-contacts-book-2-line" style="font-size:1rem;"></i> EVOLUCIÓN DE CARTERA (COMPRADORES)';
+
+            var tbody = document.getElementById('clientTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                var lista = r.listaCompradores.slice();
+                // Ordenar por volumen 2026 desc
+                lista.sort(function(a,b){ return b['2026'] - a['2026']; });
+                var formatN = function(n){ return n > 0 ? Math.round(n).toLocaleString('de-DE') : '-'; };
+                lista.forEach(function(c){
+                    var sumCheck = c['2023']+c['2024']+c['2025']+c['2026'];
+                    if (sumCheck === 0) return;
+                    var tr = document.createElement('tr');
+                    // Nombre
+                    var tdName = document.createElement('td');
+                    tdName.className = 'client-name-cell';
+                    tdName.innerText = c.nombre || c.cuit;
+                    tdName.title = c.nombre + ' (CUIT: ' + c.cuit + ')';
+                    tr.appendChild(tdName);
+                    // Volúmenes por año con flechas de tendencia
+                    ['2023','2024','2025','2026'].forEach(function(y){
+                        var td = document.createElement('td');
+                        td.className = 'client-vol-cell';
+                        var val = c[y];
+                        var html = formatN(val);
+                        var prevY = (parseInt(y)-1).toString();
+                        var prevVal = c[prevY];
+                        if (prevVal !== undefined) {
+                            if (prevVal > 0 && val > 0) {
+                                if (val > prevVal) html += '<i class="ri-arrow-right-up-line client-trend-up"></i>';
+                                else if (val < prevVal) html += '<i class="ri-arrow-right-down-line client-trend-down"></i>';
+                            } else if (prevVal === 0 && val > 0) html += '<i class="ri-arrow-right-up-line client-trend-up"></i>';
+                            else if (prevVal > 0 && val === 0) html += '<i class="ri-arrow-right-down-line client-trend-down"></i>';
+                        }
+                        td.innerHTML = html;
+                        tr.appendChild(td);
+                    });
+                    // Share = % incidencia sobre total 2026
+                    var shareCell = document.createElement('td');
+                    shareCell.className = 'client-vol-cell';
+                    var share = r.vol26Total > 0 ? (c['2026']/r.vol26Total*100) : 0;
+                    shareCell.innerHTML = share > 0 ? share.toFixed(1) + '%' : '-';
+                    tr.appendChild(shareCell);
+                    tbody.appendChild(tr);
+                });
+            }
         }
 
         function applyRolePermissions(){
@@ -3383,7 +3444,18 @@ ${totalsRow}
                 volArgVend: volArgVend,
                 volDirectos: volDirectos,
                 porCategoria: porCategoria,
-                porCosecha: porCosecha
+                porCosecha: porCosecha,
+                listaCompradores: (function(){
+                    // Un registro por comprador (CUIT), con volumen por ejercicio
+                    var m = {};
+                    universo.forEach(function(d){
+                        var cuitC = String(d.cuitComp||'').replace(/\D/g,'');
+                        if (!m[cuitC]) m[cuitC] = { cuit:cuitC, nombre:d.comprador||'', '2023':0,'2024':0,'2025':0,'2026':0, ts:0 };
+                        if (m[cuitC][d.e] !== undefined) m[cuitC][d.e] += d.vol;
+                        if (d.dObj && d.dObj.getTime() > m[cuitC].ts) { m[cuitC].ts = d.dObj.getTime(); m[cuitC].nombre = d.comprador||m[cuitC].nombre; }
+                    });
+                    return Object.keys(m).map(function(k){ return m[k]; });
+                })()
             };
         }
 
