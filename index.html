@@ -1433,6 +1433,7 @@
         let USER_ROL = 'GERENCIAL';
         let USER_REPRESENTANTE = '';
         let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
+        let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría (Exportacion/Molino/Consumo/Otros)
         let selectedYear='all', activeProfileFilter='all', maxDateInDB=null, dynamicCurrentMonth=3;
         // Estado de ordenamiento de la grilla de presupuesto
         let budgetSortKey = 'target', budgetSortDir = 'desc';
@@ -1772,6 +1773,23 @@
                             gd = new Date(payload.maxDateGeneral);
                         }
                         if (gd && !isNaN(gd.getTime())) GLOBAL_MAX_DATE = gd;
+                    }
+
+                    // Categorización de compradores (Fase 1 vista compradora, solo gerenciales).
+                    // Arma un mapa CUIT -> categoría colapsada a 4: Exportacion, Molino, Consumo, Otros.
+                    CATEG_COMPRADORES = {};
+                    if (payload.categorizacion && Array.isArray(payload.categorizacion)) {
+                        payload.categorizacion.forEach(function(par){
+                            var cuit = String(par[0]||'').replace(/\D/g,'');
+                            var mercadoRaw = String(par[1]||'').toUpperCase().trim();
+                            if (!cuit) return;
+                            var cat;
+                            if (mercadoRaw.indexOf('EXPORTACION') !== -1) cat = 'Exportacion';
+                            else if (mercadoRaw.indexOf('MOLINO') !== -1) cat = 'Molino';
+                            else if (mercadoRaw.indexOf('CONSUMO') !== -1) cat = 'Consumo';
+                            else cat = 'Otros'; // Acopio/Cooperativa, Canje, Otros, y cualquier otro
+                            CATEG_COMPRADORES[cuit] = cat;
+                        });
                     }
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
                     if (payload.sio2026 && Array.isArray(payload.sio2026) && payload.sio2026.length > 1) {
