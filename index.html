@@ -116,6 +116,28 @@
         }
         .filters { padding: 1.5vh 1vw; overflow-y: auto; flex: 1; }
         .filter-group { margin-bottom: 1.3vh; }
+        /* Switch Vendedor / Comprador (vista compradora, solo gerencial) */
+        .view-switch-container { padding: 0 0 1.2vh 0; margin-bottom: 0.6vh; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .view-switch { cursor: pointer; user-select: none; }
+        .view-switch-track {
+            position: relative; display: flex; align-items: center;
+            background: rgba(0,0,0,0.22); border-radius: 999px; height: 34px;
+            padding: 3px; overflow: hidden;
+        }
+        .view-switch-label {
+            flex: 1; text-align: center; z-index: 2; font-size: 0.72rem; font-weight: 700;
+            color: rgba(255,255,255,0.55); transition: color 0.25s ease; line-height: 28px;
+        }
+        .view-switch-thumb {
+            position: absolute; top: 3px; left: 3px; width: calc(50% - 3px); height: 28px;
+            background: var(--primary, #005C35); border-radius: 999px;
+            transition: transform 0.25s ease; z-index: 1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
+        /* Estado comprador: la perilla se desliza a la derecha */
+        .view-switch.mode-comprador .view-switch-thumb { transform: translateX(100%); }
+        .view-switch.mode-vendedor .vsl-left { color: #fff; }
+        .view-switch.mode-comprador .vsl-right { color: #fff; }
         .filter-label {
             font-size: 0.6rem; font-weight: 700; color: #94a3b8; display: block;
             margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
@@ -956,6 +978,15 @@
                     <img src="data:image/jpeg;base64,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" alt="INTAGRO SA" style="max-width: 100%; max-height: 50px; object-fit: contain; border-radius: 12px;">
                 </div>
             </div>
+            <div class="view-switch-container" id="viewSwitchContainer" style="display:none;">
+                <div class="view-switch" id="viewSwitch" onclick="toggleViewMode()">
+                    <div class="view-switch-track">
+                        <span class="view-switch-label vsl-left">Vendedor</span>
+                        <span class="view-switch-label vsl-right">Comprador</span>
+                        <div class="view-switch-thumb" id="viewSwitchThumb"></div>
+                    </div>
+                </div>
+            </div>
             <div class="filters">
                 <div class="filter-group" id="filterGroupRepre">
                     <label class="filter-label">Repre/ Comercial</label>
@@ -1434,6 +1465,7 @@
         let USER_REPRESENTANTE = '';
         let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
         let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría (Exportacion/Molino/Consumo/Otros)
+        let VIEW_MODE = 'vendedor'; // 'vendedor' | 'comprador' (vista compradora, solo gerencial)
         let selectedYear='all', activeProfileFilter='all', maxDateInDB=null, dynamicCurrentMonth=3;
         // Estado de ordenamiento de la grilla de presupuesto
         let budgetSortKey = 'target', budgetSortDir = 'desc';
@@ -2006,6 +2038,7 @@
                 const dash=document.getElementById('dashboard');
                 dash.style.display='flex';
                 applyRolePermissions();
+                initViewSwitch();
                 initFilters();
                 fillBudgetTable();
                 
@@ -3025,6 +3058,38 @@ ${totalsRow}
         // ============================================================
         // FASE 2 - Adaptación de la interfaz según el rol del usuario
         // ============================================================
+        // ============================================================
+        // FASE 2 vista compradora - Switch Vendedor / Comprador
+        // ============================================================
+        function initViewSwitch(){
+            // Solo gerenciales ven el switch
+            const cont = document.getElementById('viewSwitchContainer');
+            const sw = document.getElementById('viewSwitch');
+            if (!cont || !sw) return;
+            if (USER_ROL === 'GERENCIAL') {
+                cont.style.display = 'block';
+                sw.classList.add('mode-vendedor');
+            } else {
+                cont.style.display = 'none';
+            }
+        }
+
+        function toggleViewMode(){
+            if (USER_ROL !== 'GERENCIAL') return; // seguridad: solo gerencial
+            VIEW_MODE = (VIEW_MODE === 'vendedor') ? 'comprador' : 'vendedor';
+            const sw = document.getElementById('viewSwitch');
+            if (sw) {
+                sw.classList.toggle('mode-vendedor', VIEW_MODE === 'vendedor');
+                sw.classList.toggle('mode-comprador', VIEW_MODE === 'comprador');
+            }
+            // Resetear filtros al cambiar de modo
+            if (typeof resetFilters === 'function') resetFilters();
+            // Por ahora (Fase 2) solo cambiamos el modo visual del switch.
+            // La adaptación de los cálculos se implementa en la Fase 3.
+            // Re-render para reflejar el cambio (cuando esté la lógica comprador).
+            if (typeof runEngine === 'function') { try { runEngine(); } catch(e){ console.warn(e); } }
+        }
+
         function applyRolePermissions(){
             const esGerencial = (USER_ROL === 'GERENCIAL');
 
