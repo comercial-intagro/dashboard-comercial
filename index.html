@@ -1465,6 +1465,7 @@
 
         // VARIABLES GLOBALES
         let DB=[], ChartProd=null, ChartHarvest=null;
+        let DB_FULL=[]; // todas las operaciones incl. Argentrading vendedor (vista compradora)
         // Fase 2 - multi-usuario: rol y representante del usuario actual
         let USER_ROL = 'GERENCIAL';
         let USER_REPRESENTANTE = '';
@@ -1951,7 +1952,11 @@
                 if(tn<=0)return acc;
                 
                 let v=(row[colVend]||'').trim().toUpperCase();
-                if(v.includes("ARGENTRADING")&&!v.includes("ESTADISTICA"))return acc;
+                // Argentrading vendedor: antes se descartaba del DB. Ahora se MARCA con
+                // un flag y se deja pasar, para que la vista compradora pueda contarlo.
+                // La vista vendedora sigue usando 'DB' (que se arma sin estas filas), así
+                // queda idéntica a antes. La vista compradora usa 'DB_FULL' (con todo).
+                let esArgVendedor = (v.includes("ARGENTRADING") && !v.includes("ESTADISTICA"));
                 
                 let cuitVendRaw=(row[colCuitVend]||'').toString().trim();
                 
@@ -2007,10 +2012,17 @@
                     moneda:(row[colMoneda]||'').toString().trim(),
                     precio:(row[colPrecio]||'').toString().trim(),
                     condicion:(row[colCondicion]||'').toString().trim(),
-                    tipoNeg:(row[colTipoNeg]||'').toString().trim()
+                    tipoNeg:(row[colTipoNeg]||'').toString().trim(),
+                    argVend: esArgVendedor
                 });
                 return acc;
             },[]);
+
+            // DB_FULL: todas las operaciones (incluye Argentrading vendedor) -> vista compradora.
+            // DB: sin Argentrading vendedor, IDÉNTICO a como estaba antes -> vista vendedora
+            //     (toda la lógica vendedora existente sigue usando DB sin cambios).
+            DB_FULL = DB;
+            DB = DB.filter(function(d){ return !d.argVend; });
 
             // Fecha de referencia para TODOS los cálculos temporales (días restantes,
             // objetivo diario, plan estacional). Si el backend mandó la fecha del DB
@@ -3151,8 +3163,10 @@ ${totalsRow}
             fCompFiltro = fCompFiltro || 'all';
             const ARGENTRADING_CUIT = '30711629048';
 
-            // Universo: excluir Argentrading COMPRADOR; aplicar filtros de producto y comprador
-            const universo = DB.filter(d => {
+            // Universo: usa DB_FULL (incluye Argentrading vendedor). Excluir Argentrading
+            // COMPRADOR; aplicar filtros de producto y comprador.
+            const baseDB = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
+            const universo = baseDB.filter(d => {
                 const cuitC = String(d.cuitComp||'').replace(/\D/g,'');
                 if (!cuitC) return false;                    // sin cuit comprador, no cuenta
                 if (cuitC === ARGENTRADING_CUIT) return false; // excluir Argentrading comprador
@@ -3176,11 +3190,10 @@ ${totalsRow}
             // --- Ejercicio 2026: total, Argentrading vendedor, Directos ---
             const d26 = universo.filter(d => d.e && d.e.indexOf('26') !== -1);
             const vol26Total = d26.reduce((a,b)=>a+b.vol,0);
-            // Argentrading VENDEDOR: nombre contiene ARGENTRADING y CUIT vendedor = argentrading
+            // Argentrading VENDEDOR: CUIT vendedor = Argentrading (sin importar el nombre)
             const volArgVend = d26.filter(d => {
-                const v = (d.v||'').toUpperCase();
                 const cuitV = String(d.cuitLimpio||d.cuit||'').replace(/\D/g,'');
-                return v.indexOf('ARGENTRADING') !== -1 && cuitV === ARGENTRADING_CUIT;
+                return cuitV === ARGENTRADING_CUIT;
             }).reduce((a,b)=>a+b.vol,0);
             const volDirectos = vol26Total - volArgVend;
 
