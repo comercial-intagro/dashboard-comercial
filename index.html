@@ -349,6 +349,8 @@
             display: inline-block; margin-left: 6px;
             box-shadow: 0 0 0 2px rgba(22,163,74,0.2); animation: pulse 2s infinite;
         }
+        /* No mostrar el punto verde latente en la tarjeta de Ejercicio Comercial 2026 */
+        #card2026 .live-dot { display: none !important; }
         @keyframes pulse { 0%,100%{box-shadow:0 0 0 2px rgba(22,163,74,0.2)} 50%{box-shadow:0 0 0 4px rgba(22,163,74,0.3)} }
         
         .kpi-lbl { font-size: 0.65rem; text-transform: uppercase; color: #64748b; font-weight: 800; letter-spacing: 0.5px; width: 100%; margin-bottom: 3px; }
@@ -1128,7 +1130,7 @@
                     <div class="main-kpi-grid">
                         <div class="card card-static g-ejer" id="card2026">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-bottom:2px;">
-                                <div class="kpi-lbl" style="margin-bottom:0; width:auto;">EJERCICIO COMERCIAL 2026 <span class="live-dot" title="Ejercicio en curso"></span></div>
+                                <div class="kpi-lbl" style="margin-bottom:0; width:auto;">EJERCICIO COMERCIAL 2026</div>
                                 <div id="kCuit26" style="font-size:0.65rem; font-weight:800; color:var(--primary); background:#dcfce7; padding:2px 5px; border-radius:4px; line-height:1; border:1px solid #bbf7d0; flex-shrink:0;">0 Ctas</div>
                             </div>
                             <div class="kpi-main-area" style="flex-direction:column; align-items:flex-start; justify-content:center; flex:1;">
@@ -2537,6 +2539,22 @@
         }
 
         function resetFilters() {
+            // Modo comprador: limpiar el filtro de comprador y el de producto, re-render comprador.
+            if (VIEW_MODE === 'comprador') {
+                var fComp = document.getElementById('fComp');
+                if (fComp) fComp.value = 'all';
+                var compTxt = document.getElementById('compTriggerText');
+                if (compTxt) compTxt.innerText = 'Todos';
+                var fProdC = document.getElementById('fProd');
+                if (fProdC) fProdC.value = 'all';
+                var prodTxtC = document.getElementById('prodTriggerText');
+                if (prodTxtC) prodTxtC.innerText = 'Todos';
+                // Cerrar dropdowns y limpiar búsquedas
+                ['compDropdown','prodDropdown'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('show'); });
+                var cs = document.getElementById('compSearchInput'); if (cs) cs.value = '';
+                renderVistaCompradora();
+                return;
+            }
             // Fase 2: si el usuario es repre/comercial, "limpiar" lo devuelve a SU
             // representante (no a 'all'), para no exponer datos/objetivos de la empresa.
             const esGerencial = (USER_ROL === 'GERENCIAL');
