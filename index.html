@@ -307,6 +307,13 @@
             align-self: start;
         }
         .categ-card .sm-body { margin-top: 4px; }
+        .categ-card { transition: all 0.18s ease; }
+        .categ-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .categ-card.categ-active {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 0 3px rgba(0,92,53,0.12);
+            background: #f0fdf4;
+        }
 
         .card {
             background: var(--bg-card); padding: 1vh 1vw; border-radius: var(--radius-lg);
@@ -1210,19 +1217,19 @@
 
                         <!-- Vista compradora: 4 tarjetas de categoría (ocultas en vendedor) -->
                         <div class="categ-cards-container" id="categCardsContainer" style="display:none;">
-                            <div class="sm-card categ-card" id="categExportacion">
+                            <div class="sm-card categ-card" id="categExportacion" onclick="toggleCategoria('Exportacion')" style="cursor:pointer;">
                                 <div class="sm-header"><div class="sm-title"><i class="ri-ship-line sm-icon" style="color:#2563eb;"></i> Exportación</div></div>
                                 <div class="sm-body"><div class="sm-val" id="categExpVal">0 Tn</div><div class="sm-perc" id="categExpPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
-                            <div class="sm-card categ-card" id="categMolino">
+                            <div class="sm-card categ-card" id="categMolino" onclick="toggleCategoria('Molino')" style="cursor:pointer;">
                                 <div class="sm-header"><div class="sm-title"><i class="ri-building-2-line sm-icon" style="color:#7c3aed;"></i> Molino</div></div>
                                 <div class="sm-body"><div class="sm-val" id="categMolVal">0 Tn</div><div class="sm-perc" id="categMolPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
-                            <div class="sm-card categ-card" id="categConsumo">
+                            <div class="sm-card categ-card" id="categConsumo" onclick="toggleCategoria('Consumo')" style="cursor:pointer;">
                                 <div class="sm-header"><div class="sm-title"><i class="ri-restaurant-line sm-icon" style="color:#d97706;"></i> Consumo</div></div>
                                 <div class="sm-body"><div class="sm-val" id="categConsVal">0 Tn</div><div class="sm-perc" id="categConsPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
-                            <div class="sm-card categ-card" id="categOtros">
+                            <div class="sm-card categ-card" id="categOtros" onclick="toggleCategoria('Otros')" style="cursor:pointer;">
                                 <div class="sm-header"><div class="sm-title"><i class="ri-more-2-line sm-icon" style="color:#64748b;"></i> Otros</div></div>
                                 <div class="sm-body"><div class="sm-val" id="categOtrVal">0 Tn</div><div class="sm-perc" id="categOtrPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
@@ -1539,6 +1546,7 @@
         let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
         let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría (Exportacion/Molino/Consumo/Otros)
         let VIEW_MODE = 'vendedor'; // 'vendedor' | 'comprador' (vista compradora, solo gerencial)
+        let CATEG_ACTIVA = 'all'; // categoría clickeada en la vista compradora (all/Exportacion/Molino/Consumo/Otros)
         let selectedYear='all', activeProfileFilter='all', maxDateInDB=null, dynamicCurrentMonth=3;
         // Estado de ordenamiento de la grilla de presupuesto
         let budgetSortKey = 'target', budgetSortDir = 'desc';
@@ -2549,6 +2557,11 @@
                 if (fProdC) fProdC.value = 'all';
                 var prodTxtC = document.getElementById('prodTriggerText');
                 if (prodTxtC) prodTxtC.innerText = 'Todos';
+                // Resetear categoría activa y su resaltado
+                CATEG_ACTIVA = 'all';
+                ['categExportacion','categMolino','categConsumo','categOtros'].forEach(function(id){
+                    var el = document.getElementById(id); if (el) el.classList.remove('categ-active');
+                });
                 // Cerrar dropdowns y limpiar búsquedas
                 ['compDropdown','prodDropdown'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('show'); });
                 var cs = document.getElementById('compSearchInput'); if (cs) cs.value = '';
@@ -3057,6 +3070,7 @@ ${totalsRow}
                     if (!cc || cc === ARGC) return false;
                     if (fpChart !== 'all' && d.cat !== fpChart) return false;
                     if (fcChart !== 'all' && cc !== fcChart) return false;
+                    if (CATEG_ACTIVA !== 'all' && (CATEG_COMPRADORES[cc]||'Otros') !== CATEG_ACTIVA) return false;
                     return true;
                 });
             } else {
@@ -3221,6 +3235,11 @@ ${totalsRow}
                 if (fComp) fComp.value = 'all';
                 var compTxt = document.getElementById('compTriggerText');
                 if (compTxt) compTxt.innerText = 'Todos';
+                // Resetear categoría activa y su resaltado
+                CATEG_ACTIVA = 'all';
+                ['categExportacion','categMolino','categConsumo','categOtros'].forEach(function(id){
+                    var el = document.getElementById(id); if (el) el.classList.remove('categ-active');
+                });
                 renderVistaCompradora();
             } else {
                 // Volver a vendedor: mostrar filtros normales, ocultar el de comprador
@@ -3315,6 +3334,36 @@ ${totalsRow}
             document.getElementById('compTriggerText').innerText = nombre;
             var drop = document.getElementById('compDropdown');
             if (drop) drop.classList.remove('show');
+            // Al elegir un comprador puntual, limpiar el filtro de categoría (evita conflicto)
+            if (cuit !== 'all') {
+                CATEG_ACTIVA = 'all';
+                ['categExportacion','categMolino','categConsumo','categOtros'].forEach(function(id){
+                    var el = document.getElementById(id); if (el) el.classList.remove('categ-active');
+                });
+            }
+            renderVistaCompradora();
+        }
+
+        // Click en tarjeta de categoría: filtra todo el dashboard por esa categoría.
+        // Volver a clickear la activa la desactiva.
+        function toggleCategoria(cat){
+            if (VIEW_MODE !== 'comprador') return;
+            if (CATEG_ACTIVA === cat) {
+                CATEG_ACTIVA = 'all'; // desactivar
+            } else {
+                CATEG_ACTIVA = cat;
+                // Al activar una categoría, limpiar el filtro de comprador puntual (evita conflicto)
+                var fComp = document.getElementById('fComp');
+                if (fComp) fComp.value = 'all';
+                var compTxt = document.getElementById('compTriggerText');
+                if (compTxt) compTxt.innerText = 'Todos';
+            }
+            // Resaltar la tarjeta activa
+            var mapa = { 'Exportacion':'categExportacion', 'Molino':'categMolino', 'Consumo':'categConsumo', 'Otros':'categOtros' };
+            Object.keys(mapa).forEach(function(k){
+                var el = document.getElementById(mapa[k]);
+                if (el) el.classList.toggle('categ-active', CATEG_ACTIVA === k);
+            });
             renderVistaCompradora();
         }
 
@@ -3322,7 +3371,8 @@ ${totalsRow}
             guardarTarjetasVendedor(); // asegura tener copia del original
             var r = calcularVistaCompradora(
                 document.getElementById('fProd') ? document.getElementById('fProd').value : 'all',
-                document.getElementById('fComp') ? document.getElementById('fComp').value : 'all'
+                document.getElementById('fComp') ? document.getElementById('fComp').value : 'all',
+                CATEG_ACTIVA
             );
             var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
             var pct = function(part, tot){ return tot>0 ? (part/tot*100).toFixed(1)+'%' : '0%'; };
@@ -3365,14 +3415,21 @@ ${totalsRow}
             });
             var categCont = document.getElementById('categCardsContainer');
             if (categCont) categCont.style.display = 'grid';
-            function setCateg(idVal, idPerc, valor){
+            function setCateg(idVal, idPerc, valor, totalRef){
+                var tot = (totalRef !== undefined) ? totalRef : r.vol26Total;
                 var v = document.getElementById(idVal); if (v) v.innerText = fmt(valor) + ' Tn';
-                var p = document.getElementById(idPerc); if (p) p.innerHTML = '<i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>' + pct(valor, r.vol26Total);
+                var p = document.getElementById(idPerc); if (p) p.innerHTML = '<i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>' + pct(valor, tot);
             }
-            setCateg('categExpVal','categExpPerc', r.porCategoria['Exportacion']||0);
-            setCateg('categMolVal','categMolPerc', r.porCategoria['Molino']||0);
-            setCateg('categConsVal','categConsPerc', r.porCategoria['Consumo']||0);
-            setCateg('categOtrVal','categOtrPerc', r.porCategoria['Otros']||0);
+            // Las 4 tarjetas de categoría SIEMPRE muestran el total de cada categoría
+            // (sin aplicar el filtro de categoría activa, para poder clickear entre ellas).
+            var rCat = calcularVistaCompradora(
+                document.getElementById('fProd') ? document.getElementById('fProd').value : 'all',
+                'all', 'all'
+            );
+            setCateg('categExpVal','categExpPerc', rCat.porCategoria['Exportacion']||0, rCat.vol26Total);
+            setCateg('categMolVal','categMolPerc', rCat.porCategoria['Molino']||0, rCat.vol26Total);
+            setCateg('categConsVal','categConsPerc', rCat.porCategoria['Consumo']||0, rCat.vol26Total);
+            setCateg('categOtrVal','categOtrPerc', rCat.porCategoria['Otros']||0, rCat.vol26Total);
 
             // --- Tarjetas de ejercicio histórico (2021-2025) con cuentas compradoras ---
             var lastVol = 0;
@@ -3527,6 +3584,7 @@ ${totalsRow}
                 if (!(d.e && d.e.indexOf('26')!==-1)) return false;
                 if (fComp !== 'all' && cc !== fComp) return false;
                 if (fProd !== 'all' && d.cat !== fProd) return false;
+                if (CATEG_ACTIVA !== 'all' && (CATEG_COMPRADORES[cc]||'Otros') !== CATEG_ACTIVA) return false;
                 return true;
             });
             var porMes = {};
@@ -3617,13 +3675,17 @@ ${totalsRow}
         // FASE 3 vista compradora - Motor de cálculo (validación por consola)
         // Calcula todo el lado comprador. No toca la interfaz todavía.
         // ============================================================
-        function calcularVistaCompradora(fProdFiltro, fCompFiltro){
+        function calcularVistaCompradora(fProdFiltro, fCompFiltro, fCatFiltro){
             fProdFiltro = fProdFiltro || 'all';
             fCompFiltro = fCompFiltro || 'all';
+            fCatFiltro = fCatFiltro || 'all';
             const ARGENTRADING_CUIT = '30711629048';
 
+            // Categoría de un comprador (colapsada a 4, Otros por defecto)
+            function catDe(cuitC){ return CATEG_COMPRADORES[cuitC] || 'Otros'; }
+
             // Universo: usa DB_FULL (incluye Argentrading vendedor). Excluir Argentrading
-            // COMPRADOR; aplicar filtros de producto y comprador.
+            // COMPRADOR; aplicar filtros de producto, comprador y categoría.
             const baseDB = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
             const universo = baseDB.filter(d => {
                 const cuitC = String(d.cuitComp||'').replace(/\D/g,'');
@@ -3631,11 +3693,9 @@ ${totalsRow}
                 if (cuitC === ARGENTRADING_CUIT) return false; // excluir Argentrading comprador
                 if (fProdFiltro !== 'all' && d.cat !== fProdFiltro) return false;
                 if (fCompFiltro !== 'all' && cuitC !== fCompFiltro) return false;
+                if (fCatFiltro !== 'all' && catDe(cuitC) !== fCatFiltro) return false;
                 return true;
             });
-
-            // Categoría de un comprador (colapsada a 4, Otros por defecto)
-            function catDe(cuitC){ return CATEG_COMPRADORES[cuitC] || 'Otros'; }
 
             // --- Volumen y cuentas por ejercicio ---
             const porEjercicio = {}; // ejercicio -> {vol, cuits:Set}
