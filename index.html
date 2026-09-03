@@ -3051,10 +3051,12 @@ ${totalsRow}
                 var ARGC = '30711629048';
                 var base = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
                 var fpChart = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
+                var fcChart = document.getElementById('fComp') ? document.getElementById('fComp').value : 'all';
                 data = base.filter(function(d){
                     var cc = String(d.cuitComp||'').replace(/\D/g,'');
                     if (!cc || cc === ARGC) return false;
                     if (fpChart !== 'all' && d.cat !== fpChart) return false;
+                    if (fcChart !== 'all' && cc !== fcChart) return false;
                     return true;
                 });
             } else {
@@ -3514,12 +3516,18 @@ ${totalsRow}
             var tbody = document.getElementById('execTableBody');
             if (!tbody) return;
             var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
-            // Volumen por mes del ejercicio 2026 (universo comprador)
+            // Volumen por mes del ejercicio 2026 (universo comprador), respetando filtros
             var ARGC = '30711629048';
             var base = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
+            var fComp = document.getElementById('fComp') ? document.getElementById('fComp').value : 'all';
+            var fProd = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
             var d26 = base.filter(function(d){
                 var cc = String(d.cuitComp||'').replace(/\D/g,'');
-                return cc && cc !== ARGC && d.e && d.e.indexOf('26')!==-1;
+                if (!cc || cc === ARGC) return false;
+                if (!(d.e && d.e.indexOf('26')!==-1)) return false;
+                if (fComp !== 'all' && cc !== fComp) return false;
+                if (fProd !== 'all' && d.cat !== fProd) return false;
+                return true;
             });
             var porMes = {};
             d26.forEach(function(d){
