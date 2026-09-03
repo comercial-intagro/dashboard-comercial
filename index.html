@@ -985,6 +985,46 @@
         </div>
     </div>
 
+    <div id="categModal" class="modal-overlay">
+        <div class="modal-content" style="width: 900px; max-width: 95%;">
+            <div class="modal-header" style="border-bottom:none;margin-bottom:0;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <i class="ri-price-tag-3-line" style="font-size:1.6rem;color:var(--primary);"></i>
+                    <h2 style="color:var(--primary);font-weight:900;font-size:1.4rem;letter-spacing:-0.5px;">Categorización de Compradores</h2>
+                </div>
+                <div class="close-btn" onclick="toggleModal('categModal',false)"><i class="ri-close-line"></i></div>
+            </div>
+            <div style="font-size:0.78rem;color:#64748b;margin-bottom:12px;">Vista de solo lectura. Para modificar una categoría, avisá y se edita en el sistema. El volumen corresponde al ejercicio 2026 en curso.</div>
+            <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+                <div style="position:relative;flex:1;min-width:200px;">
+                    <i class="ri-search-line" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;"></i>
+                    <input type="text" id="categSearchInput" placeholder="Buscar comprador o CUIT..." onkeyup="filterCategModal()" style="width:100%;padding:8px 8px 8px 32px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.85rem;">
+                </div>
+                <select id="categMercadoFilter" onchange="filterCategModal()" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.85rem;">
+                    <option value="all">Todos los mercados</option>
+                    <option value="Exportacion">Exportación</option>
+                    <option value="Molino">Molino</option>
+                    <option value="Consumo">Consumo</option>
+                    <option value="Otros">Otros</option>
+                </select>
+            </div>
+            <div style="max-height:60vh;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                    <thead style="position:sticky;top:0;background:var(--primary);color:#fff;z-index:1;">
+                        <tr>
+                            <th style="text-align:left;padding:10px;">CUIT</th>
+                            <th style="text-align:left;padding:10px;">Comprador</th>
+                            <th style="text-align:left;padding:10px;">Mercado</th>
+                            <th style="text-align:right;padding:10px;">Vol. 2026 (Tn)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categModalBody"></tbody>
+                </table>
+            </div>
+            <div id="categModalTotal" style="margin-top:10px;font-size:0.82rem;font-weight:800;color:var(--primary);text-align:right;"></div>
+        </div>
+    </div>
+
     <div id="prodNacModal" class="modal-overlay">
         <div class="modal-content" style="width: 1150px; max-width: 95%;">
             <div class="modal-header" style="border-bottom:none;margin-bottom:0;">
@@ -1106,6 +1146,7 @@
                     <button class="btn-sec" onclick="toggleModal('canjModal',true)"><i class="ri-exchange-funds-fill"></i> Canjeadores</button>
                     <button class="btn-sec" onclick="toggleModal('sioModal',true)"><i class="ri-line-chart-fill"></i> Histórico SIO Granos</button>
                     <button class="btn-sec" onclick="toggleModal('prodNacModal',true)"><i class="ri-earth-line"></i> Producción Nacional</button>
+                    <button class="btn-sec" onclick="toggleModal('categModal',true)"><i class="ri-price-tag-3-line"></i> Categorización Compradores</button>
                 </div>
             </div>
         </aside>
@@ -3675,6 +3716,76 @@ ${totalsRow}
         // FASE 3 vista compradora - Motor de cálculo (validación por consola)
         // Calcula todo el lado comprador. No toca la interfaz todavía.
         // ============================================================
+        // ============================================================
+        // Modal de Categorización de Compradores (solo lectura, gerencial)
+        // ============================================================
+        function llenarCategModal(){
+            var tbody = document.getElementById('categModalBody');
+            if (!tbody) return;
+            var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
+            // Volumen 2026 por comprador (usa el motor)
+            var r = calcularVistaCompradora('all','all','all');
+            var volPorCuit = {};
+            r.listaCompradores.forEach(function(c){ volPorCuit[c.cuit] = c['2026']; });
+
+            // Lista base: todos los compradores categorizados (del mapa CATEG_COMPRADORES),
+            // más su nombre (de la lista) y su volumen 2026.
+            var nombrePorCuit = {};
+            r.listaCompradores.forEach(function(c){ nombrePorCuit[c.cuit] = c.nombre; });
+
+            var filas = [];
+            Object.keys(CATEG_COMPRADORES).forEach(function(cuit){
+                filas.push({
+                    cuit: cuit,
+                    nombre: nombrePorCuit[cuit] || '(sin operaciones 2026)',
+                    mercado: CATEG_COMPRADORES[cuit],
+                    vol: volPorCuit[cuit] || 0
+                });
+            });
+            // Ordenar por volumen 2026 desc
+            filas.sort(function(a,b){ return b.vol - a.vol; });
+
+            tbody.innerHTML = '';
+            var mercadoLabel = { 'Exportacion':'Exportación', 'Molino':'Molino', 'Consumo':'Consumo', 'Otros':'Otros' };
+            var colorMercado = { 'Exportacion':'#2563eb', 'Molino':'#7c3aed', 'Consumo':'#d97706', 'Otros':'#64748b' };
+            filas.forEach(function(f){
+                var tr = document.createElement('tr');
+                tr.className = 'categ-modal-row';
+                tr.setAttribute('data-mercado', f.mercado);
+                tr.setAttribute('data-search', (f.nombre + ' ' + f.cuit).toUpperCase());
+                tr.style.borderBottom = '1px solid #f1f5f9';
+                tr.innerHTML =
+                    '<td style="padding:8px 10px;font-family:monospace;">' + f.cuit + '</td>' +
+                    '<td style="padding:8px 10px;">' + f.nombre + '</td>' +
+                    '<td style="padding:8px 10px;"><span style="color:' + (colorMercado[f.mercado]||'#64748b') + ';font-weight:700;">' + (mercadoLabel[f.mercado]||f.mercado) + '</span></td>' +
+                    '<td style="padding:8px 10px;text-align:right;font-weight:600;">' + (f.vol>0?fmt(f.vol):'-') + '</td>';
+                tbody.appendChild(tr);
+            });
+            window.__categFilas = filas.length;
+            filterCategModal();
+        }
+
+        function filterCategModal(){
+            var search = (document.getElementById('categSearchInput').value||'').toUpperCase();
+            var merc = document.getElementById('categMercadoFilter').value;
+            var rows = document.querySelectorAll('#categModalBody .categ-modal-row');
+            var visibles = 0, volTotal = 0;
+            var parseVol = function(txt){ return parseInt((txt||'').replace(/\./g,'').replace(/[^0-9]/g,''))||0; };
+            rows.forEach(function(tr){
+                var okSearch = tr.getAttribute('data-search').indexOf(search) > -1;
+                var okMerc = (merc === 'all') || (tr.getAttribute('data-mercado') === merc);
+                if (okSearch && okMerc) {
+                    tr.style.display = '';
+                    visibles++;
+                    volTotal += parseVol(tr.cells[3].innerText);
+                } else {
+                    tr.style.display = 'none';
+                }
+            });
+            var totEl = document.getElementById('categModalTotal');
+            if (totEl) totEl.innerText = visibles + ' compradores | Volumen 2026: ' + volTotal.toLocaleString('de-DE') + ' Tn';
+        }
+
         function calcularVistaCompradora(fProdFiltro, fCompFiltro, fCatFiltro){
             fProdFiltro = fProdFiltro || 'all';
             fCompFiltro = fCompFiltro || 'all';
@@ -4871,12 +4982,16 @@ ${totalsRow}
         function toggleModal(id, show) {
             // Seguridad Fase 2: los modales de mercado/herramientas son solo para gerenciales.
             // Si un no-gerencial intenta abrir uno (incluso por consola), se bloquea.
-            const modalesGerenciales = ['budgetModal','harvestModal','historyModal','canjModal','sioModal','prodNacModal'];
+            const modalesGerenciales = ['budgetModal','harvestModal','historyModal','canjModal','sioModal','prodNacModal','categModal'];
             if (show && USER_ROL !== 'GERENCIAL' && modalesGerenciales.indexOf(id) !== -1) {
                 return;
             }
             const modal = document.getElementById(id);
             if(modal) modal.style.display = show ? 'flex' : 'none';
+            // Llenar el modal de categorización al abrirlo
+            if (id === 'categModal' && show) {
+                if (typeof llenarCategModal === 'function') llenarCategModal();
+            }
             // Hooks específicos al abrir el modal SIO
             if (id === 'sioModal' && show) {
                 // Disparar carga del Sheet sólo la primera vez
