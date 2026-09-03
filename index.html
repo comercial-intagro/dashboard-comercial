@@ -3424,6 +3424,9 @@ ${totalsRow}
                 lista.forEach(function(c){
                     var sumCheck = c['2023']+c['2024']+c['2025']+c['2026'];
                     if (sumCheck === 0) return;
+                    // Mejor año (entre 2023-2025) para la pastilla amarilla, igual que vendedor
+                    var bestYear = null, bestVal = 0;
+                    ['2023','2024','2025'].forEach(function(y){ if (c[y] > bestVal) { bestVal = c[y]; bestYear = y; } });
                     var tr = document.createElement('tr');
                     // Nombre
                     var tdName = document.createElement('td');
@@ -3431,12 +3434,13 @@ ${totalsRow}
                     tdName.innerText = c.nombre || c.cuit;
                     tdName.title = c.nombre + ' (CUIT: ' + c.cuit + ')';
                     tr.appendChild(tdName);
-                    // Volúmenes por año con flechas de tendencia
+                    // Volúmenes por año con pastilla del mejor año y flechas de tendencia
                     ['2023','2024','2025','2026'].forEach(function(y){
                         var td = document.createElement('td');
                         td.className = 'client-vol-cell';
                         var val = c[y];
                         var html = formatN(val);
+                        if (y === bestYear && val > 0 && y !== '2026') { html = '<span class="client-best-pill">' + html + '</span>'; }
                         var prevY = (parseInt(y)-1).toString();
                         var prevVal = c[prevY];
                         if (prevVal !== undefined) {
@@ -3449,11 +3453,14 @@ ${totalsRow}
                         td.innerHTML = html;
                         tr.appendChild(td);
                     });
-                    // Share = % incidencia sobre total 2026
+                    // Share = % incidencia sobre total 2026 (mismo estilo que vendedor)
                     var shareCell = document.createElement('td');
                     shareCell.className = 'client-vol-cell';
+                    shareCell.style.color = 'var(--primary)';
+                    shareCell.style.fontWeight = '800';
+                    shareCell.style.backgroundColor = '#f0fdf4';
                     var share = r.vol26Total > 0 ? (c['2026']/r.vol26Total*100) : 0;
-                    shareCell.innerHTML = share > 0 ? share.toFixed(1) + '%' : '-';
+                    shareCell.innerHTML = c['2026'] > 0 ? share.toFixed(1) + '%' : '-';
                     tr.appendChild(shareCell);
                     tbody.appendChild(tr);
                 });
@@ -3512,7 +3519,7 @@ ${totalsRow}
                 tr.innerHTML =
                     '<td style="text-align:left;">' + monthName + '</td>' +
                     '<td style="text-align:center;">-</td>' +
-                    '<td style="text-align:right;">' + (vol>0?fmt(vol):'-') + '</td>' +
+                    '<td style="text-align:right; font-weight:700; color:var(--text-main);">' + (vol>0?fmt(vol):'-') + '</td>' +
                     '<td style="text-align:right;">-</td>' +
                     '<td style="text-align:right;">-</td>' +
                     '<td style="text-align:right;">-</td>' +
@@ -3526,7 +3533,7 @@ ${totalsRow}
             trTot.innerHTML =
                 '<td style="text-align:left;">TOTAL</td>' +
                 '<td style="text-align:center;">-</td>' +
-                '<td style="text-align:right;">' + fmt(totalVol) + '</td>' +
+                '<td style="text-align:right; color:var(--text-main);">' + fmt(totalVol) + '</td>' +
                 '<td style="text-align:right;">-</td>' +
                 '<td style="text-align:right;">-</td>' +
                 '<td style="text-align:right;">-</td>' +
