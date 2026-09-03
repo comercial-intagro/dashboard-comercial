@@ -4451,21 +4451,38 @@ ${totalsRow}
             const ms = monthNumToStr(monthNum);
             if (!ms) return null;
             const sioBucket = SIO_2026[ms];
-            if (!sioBucket || !sioBucket.total || sioBucket.total <= 0) return null;
-            const intVol = getIntagroVolumeForMonthYear(ms, '2026', 'ALL');
+            if (!sioBucket) return null;
+            // Respetar el filtro de producto: si hay un producto filtrado, usar el SIO
+            // y el volumen Intagro de ESE producto; si no, el total.
+            const fp = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
+            let sioRef, prodParam;
+            if (fp && fp !== 'all') {
+                sioRef = sioBucket[fp];      // SIO del producto (ej: sioBucket.SOJA)
+                prodParam = fp;
+            } else {
+                sioRef = sioBucket.total;
+                prodParam = 'ALL';
+            }
+            if (!sioRef || sioRef <= 0) return null;
+            const intVol = getIntagroVolumeForMonthYear(ms, '2026', prodParam);
             if (intVol <= 0) return null;
-            const share = (intVol / sioBucket.total) * 100;
+            const share = (intVol / sioRef) * 100;
             return share.toFixed(2).replace('.', ',') + '%';
         }
 
         // Share Intagro/SIO anual del ejercicio 2026 acumulado: Σ Intagro / Σ SIO de los meses cargados
         function getShare2026Anual() {
+            const fp = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
             let sumSio = 0, sumInt = 0;
             ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'].forEach(ms => {
                 const sioBucket = SIO_2026[ms];
-                if (!sioBucket || !sioBucket.total || sioBucket.total <= 0) return;
-                sumSio += sioBucket.total;
-                sumInt += getIntagroVolumeForMonthYear(ms, '2026', 'ALL');
+                if (!sioBucket) return;
+                let sioRef, prodParam;
+                if (fp && fp !== 'all') { sioRef = sioBucket[fp]; prodParam = fp; }
+                else { sioRef = sioBucket.total; prodParam = 'ALL'; }
+                if (!sioRef || sioRef <= 0) return;
+                sumSio += sioRef;
+                sumInt += getIntagroVolumeForMonthYear(ms, '2026', prodParam);
             });
             if (sumSio <= 0) return 0;
             return (sumInt / sumSio) * 100;
