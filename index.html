@@ -325,6 +325,25 @@
             content: ''; position: absolute; top: 0; left: 0;
             width: 4px; height: 100%; background: var(--primary);
         }
+        /* Tarjetas de ventas (vista compradora): azul (Argentrading) y rojo (Directas) */
+        .card-azul {
+            background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+            border: 1px solid #bfdbfe; position: relative;
+        }
+        .card-azul::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 4px; height: 100%; background: #2563eb;
+        }
+        .card-rojo {
+            background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+            border: 1px solid #fecaca; position: relative;
+        }
+        .card-rojo::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 4px; height: 100%; background: #dc2626;
+        }
+        .val-azul { color: #2563eb; }
+        .val-rojo { color: #dc2626; }
         .live-dot {
             height: 6px; width: 6px; background-color: var(--trend-up); border-radius: 50%;
             display: inline-block; margin-left: 6px;
@@ -1190,20 +1209,20 @@
                         <!-- Vista compradora: 4 tarjetas de categoría (ocultas en vendedor) -->
                         <div class="categ-cards-container" id="categCardsContainer" style="display:none;">
                             <div class="sm-card categ-card" id="categExportacion">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-ship-line sm-icon"></i> Exportación</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categExpVal">0 Tn</div><div class="sm-perc" id="categExpPerc">0%</div></div>
+                                <div class="sm-header"><div class="sm-title"><i class="ri-ship-line sm-icon" style="color:#2563eb;"></i> Exportación</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categExpVal">0 Tn</div><div class="sm-perc" id="categExpPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
                             <div class="sm-card categ-card" id="categMolino">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-building-2-line sm-icon"></i> Molino</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categMolVal">0 Tn</div><div class="sm-perc" id="categMolPerc">0%</div></div>
+                                <div class="sm-header"><div class="sm-title"><i class="ri-building-2-line sm-icon" style="color:#7c3aed;"></i> Molino</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categMolVal">0 Tn</div><div class="sm-perc" id="categMolPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
                             <div class="sm-card categ-card" id="categConsumo">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-restaurant-line sm-icon"></i> Consumo</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categConsVal">0 Tn</div><div class="sm-perc" id="categConsPerc">0%</div></div>
+                                <div class="sm-header"><div class="sm-title"><i class="ri-restaurant-line sm-icon" style="color:#d97706;"></i> Consumo</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categConsVal">0 Tn</div><div class="sm-perc" id="categConsPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
                             <div class="sm-card categ-card" id="categOtros">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-more-2-line sm-icon"></i> Otros</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categOtrVal">0 Tn</div><div class="sm-perc" id="categOtrPerc">0%</div></div>
+                                <div class="sm-header"><div class="sm-title"><i class="ri-more-2-line sm-icon" style="color:#64748b;"></i> Otros</div></div>
+                                <div class="sm-body"><div class="sm-val" id="categOtrVal">0 Tn</div><div class="sm-perc" id="categOtrPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
                             </div>
                         </div>
 
@@ -3208,8 +3227,8 @@ ${totalsRow}
         function restaurarTarjetasVendedor(){
             var a = document.querySelector('.g-avan');
             var o = document.querySelector('.g-obj');
-            if (a && _htmlAvanOrig !== null) a.innerHTML = _htmlAvanOrig;
-            if (o && _htmlObjOrig !== null) o.innerHTML = _htmlObjOrig;
+            if (a) { a.classList.remove('card-azul'); if (_htmlAvanOrig !== null) a.innerHTML = _htmlAvanOrig; }
+            if (o) { o.classList.remove('card-rojo'); if (_htmlObjOrig !== null) o.innerHTML = _htmlObjOrig; }
             var shareSioBadge = document.getElementById('shareSioBadge');
             if (shareSioBadge) shareSioBadge.style.display = '';
             // Mostrar rep/com/obb de nuevo y ocultar las tarjetas de categoría
@@ -3299,21 +3318,23 @@ ${totalsRow}
 
             var cardAvan = document.querySelector('.g-avan');
             if (cardAvan) {
+                cardAvan.classList.add('card-azul');
                 cardAvan.innerHTML =
-                    '<div class="kpi-lbl">TOTAL VENTAS ARGENTRADING</div>' +
-                    '<div class="kpi-main-area" style="flex-direction:column; align-items:flex-start; justify-content:center; flex:1;">' +
-                        '<div class="kpi-val val-primary" style="line-height:1;">' + fmt(r.volArgVend) + ' Tn</div>' +
-                        '<div style="font-size:0.7rem; color:#64748b; font-weight:800; margin-top:6px;">' + pct(r.volArgVend, r.vol26Total) + ' del total</div>' +
+                    '<div class="kpi-lbl" style="margin-bottom:2px;">TOTAL VENTAS ARGENTRADING</div>' +
+                    '<div class="kpi-main-area" style="align-items:center; justify-content:space-between; flex:1;">' +
+                        '<div class="kpi-val val-azul" style="line-height:1;">' + fmt(r.volArgVend) + ' Tn</div>' +
+                        '<div style="font-size:0.9rem; font-weight:800; color:#2563eb; background:#eff6ff; padding:2px 8px; border-radius:5px; border:1px solid #bfdbfe;">' + pct(r.volArgVend, r.vol26Total) + '</div>' +
                     '</div>';
             }
 
             var cardObj = document.querySelector('.g-obj');
             if (cardObj) {
+                cardObj.classList.add('card-rojo');
                 cardObj.innerHTML =
-                    '<div class="kpi-lbl">TOTAL VENTAS DIRECTAS</div>' +
-                    '<div class="kpi-main-area" style="flex-direction:column; align-items:flex-start; justify-content:center; flex:1;">' +
-                        '<div class="kpi-val" style="line-height:1; color:var(--text-main);">' + fmt(r.volDirectos) + ' Tn</div>' +
-                        '<div style="font-size:0.7rem; color:#64748b; font-weight:800; margin-top:6px;">' + pct(r.volDirectos, r.vol26Total) + ' del total</div>' +
+                    '<div class="kpi-lbl" style="margin-bottom:2px;">TOTAL VENTAS DIRECTAS</div>' +
+                    '<div class="kpi-main-area" style="align-items:center; justify-content:space-between; flex:1;">' +
+                        '<div class="kpi-val val-rojo" style="line-height:1;">' + fmt(r.volDirectos) + ' Tn</div>' +
+                        '<div style="font-size:0.9rem; font-weight:800; color:#dc2626; background:#fef2f2; padding:2px 8px; border-radius:5px; border:1px solid #fecaca;">' + pct(r.volDirectos, r.vol26Total) + '</div>' +
                     '</div>';
             }
 
@@ -3326,7 +3347,7 @@ ${totalsRow}
             if (categCont) categCont.style.display = 'grid';
             function setCateg(idVal, idPerc, valor){
                 var v = document.getElementById(idVal); if (v) v.innerText = fmt(valor) + ' Tn';
-                var p = document.getElementById(idPerc); if (p) p.innerText = pct(valor, r.vol26Total);
+                var p = document.getElementById(idPerc); if (p) p.innerHTML = '<i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>' + pct(valor, r.vol26Total);
             }
             setCateg('categExpVal','categExpPerc', r.porCategoria['Exportacion']||0);
             setCateg('categMolVal','categMolPerc', r.porCategoria['Molino']||0);
@@ -3440,6 +3461,23 @@ ${totalsRow}
 
             // --- Gráfico de productos (usa datos comprador porque VIEW_MODE='comprador') ---
             if (typeof renderProductChart === 'function') { try { renderProductChart(); } catch(e){ console.warn(e); } }
+
+            // --- Recuadro comparativo "AÑO 2025" del gráfico: recalcular con datos comprador ---
+            var ytdChartEl = document.getElementById('kVol25YTDChart');
+            if (ytdChartEl) {
+                var v25 = r.vol25YTD || 0;
+                var v26c = r.vol26Total || 0;
+                var ytdPerc = 0;
+                if (v25 > 0) ytdPerc = ((v26c - v25) / v25) * 100;
+                else if (v26c > 0) ytdPerc = 100;
+                var ytdColor = '#64748b', ytdBg = '#f1f5f9', ytdIcon = '';
+                if (ytdPerc > 0) { ytdColor='#16a34a'; ytdBg='#dcfce7'; ytdIcon='<i class="ri-arrow-right-up-line"></i> '; }
+                else if (ytdPerc < 0) { ytdColor='#dc2626'; ytdBg='#fee2e2'; ytdIcon='<i class="ri-arrow-right-down-line"></i> '; }
+                ytdChartEl.innerHTML =
+                    '<div style="font-size:0.5rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">AÑO 2025</div>' +
+                    '<div style="color:'+ytdColor+'; background:'+ytdBg+'; padding:2px 6px; border-radius:4px; font-weight:800; font-size:0.65rem; display:inline-flex; align-items:center; margin-bottom:4px;">'+ytdIcon+(ytdPerc>0?'+':'')+ytdPerc.toFixed(1)+'%</div>' +
+                    '<div style="font-size:0.75rem; font-weight:900; color:#64748b;">'+fmt(v25)+' Tn</div>';
+            }
 
             // --- Estacionalidad: solo volumen mensual del ejercicio 2026, resto vacío ---
             renderEstacionalidadComprador(r);
@@ -3601,10 +3639,21 @@ ${totalsRow}
                 porCosecha[h].cuits.add(String(d.cuitComp||'').replace(/\D/g,''));
             });
 
+            // --- 2025 YTD (a la misma fecha que va 2026) para el recuadro comparativo ---
+            var vol25YTD = 0;
+            if (typeof maxDateInDB !== 'undefined' && maxDateInDB) {
+                var maxD25 = new Date(maxDateInDB.getTime());
+                maxD25.setFullYear(maxD25.getFullYear() - 1);
+                universo.forEach(function(d){
+                    if (d.e === '2025' && d.dObj && d.dObj <= maxD25) vol25YTD += d.vol;
+                });
+            }
+
             return {
                 universo: universo.length,
                 porEjercicio: porEjercicio,
                 vol26Total: vol26Total,
+                vol25YTD: vol25YTD,
                 volArgVend: volArgVend,
                 volDirectos: volDirectos,
                 porCategoria: porCategoria,
