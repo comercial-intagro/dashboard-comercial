@@ -1135,6 +1135,28 @@
                         </div>
                     </div>
                 </div>
+                <div class="filter-group">
+                    <label class="filter-label">Destino</label>
+                    <div class="custom-select-container" id="customDestSelect">
+                        <input type="hidden" id="fDest" value="all">
+                        <div class="custom-select-trigger" onclick="toggleDestDropdown(event)">
+                            <span id="destTriggerText">Todas las zonas</span>
+                        </div>
+                        <div class="custom-select-dropdown" id="destDropdown">
+                            <div class="custom-select-options" id="destOptionsList">
+                                <div class="custom-select-option" onclick="selectDest('all','Todas las zonas')">Todas las zonas</div>
+                                <div class="custom-select-option" onclick="selectDest('ZONA ROSARIO TOTAL','Zona Rosario Total')">Zona Rosario Total</div>
+                                <div class="custom-select-option" onclick="selectDest('ZONA BAHIA BLANCA','Zona Bahía Blanca')">Zona Bahía Blanca</div>
+                                <div class="custom-select-option" onclick="selectDest('ZONA QUEQUEN','Zona Quequén')">Zona Quequén</div>
+                                <div class="custom-select-option" onclick="selectDest('ZONA LIMA/ TLP','Zona Lima/TLP')">Zona Lima/TLP</div>
+                                <div class="custom-select-option" onclick="selectDest('ZONA RAMALLO','Zona Ramallo')">Zona Ramallo</div>
+                                <div class="custom-select-option" onclick="selectDest('ZONA JUNIN','Zona Junín')">Zona Junín</div>
+                                <div class="custom-select-option" onclick="selectDest('ZONA DEL GUAZU','Zona del Guazú')">Zona del Guazú</div>
+                                <div class="custom-select-option" onclick="selectDest('OTROS','Otros')">Otros</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <button class="btn-clean" onclick="resetFilters()">
                     <i class="ri-refresh-line"></i> Limpiar Filtros
                 </button>
@@ -1586,6 +1608,19 @@
         let USER_REPRESENTANTE = '';
         let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
         let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría (Exportacion/Molino/Consumo/Otros)
+        let DEST_ZONA = {}; // mapa descripcion destino normalizada -> zona
+        function normDestino(s){
+            if(!s) return '';
+            s = String(s).toUpperCase().trim();
+            s = s.replace(/Á/g,'A').replace(/É/g,'E').replace(/Í/g,'I').replace(/Ó/g,'O').replace(/Ú/g,'U').replace(/Ñ/g,'N');
+            s = s.replace(/\s+/g,' ');
+            return s;
+        }
+        // Devuelve la zona de una operación según su destino (OTROS si no matchea)
+        function zonaDeDestino(destino){
+            var z = DEST_ZONA[normDestino(destino)];
+            return z || 'OTROS';
+        }
         let VIEW_MODE = 'vendedor'; // 'vendedor' | 'comprador' (vista compradora, solo gerencial)
         let CATEG_ACTIVA = 'all'; // categoría clickeada en la vista compradora (all/Exportacion/Molino/Consumo/Otros)
         let selectedYear='all', activeProfileFilter='all', maxDateInDB=null, dynamicCurrentMonth=3;
@@ -1943,6 +1978,16 @@
                             else if (mercadoRaw.indexOf('CONSUMO') !== -1) cat = 'Consumo';
                             else cat = 'Otros'; // Acopio/Cooperativa, Canje, Otros, y cualquier otro
                             CATEG_COMPRADORES[cuit] = cat;
+                        });
+                    }
+                    // Mapa de destinos -> zona (para el filtro de Destino, todos los usuarios).
+                    // Normaliza la descripción para el cruce con el campo destino del DB.
+                    DEST_ZONA = {};
+                    if (payload.destinosZonas && Array.isArray(payload.destinosZonas)) {
+                        payload.destinosZonas.forEach(function(par){
+                            var desc = normDestino(par[0]);
+                            var zona = String(par[1]||'').trim();
+                            if (desc && zona) DEST_ZONA[desc] = zona;
                         });
                     }
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
@@ -2587,6 +2632,23 @@
             else { runEngine(); }
         }
 
+        function toggleDestDropdown(e){
+            if(e) e.stopPropagation();
+            const drop = document.getElementById('destDropdown');
+            if (!drop) return;
+            document.getElementById('repDropdown').classList.remove('show');
+            if(document.getElementById('prodDropdown')) document.getElementById('prodDropdown').classList.remove('show');
+            drop.classList.toggle('show');
+        }
+
+        function selectDest(val, name){
+            document.getElementById('fDest').value = val;
+            document.getElementById('destTriggerText').innerText = name;
+            document.getElementById('destDropdown').classList.remove('show');
+            if (VIEW_MODE === 'comprador') { renderVistaCompradora(); }
+            else { runEngine(); }
+        }
+
         function resetFilters() {
             // Modo comprador: limpiar el filtro de comprador y el de producto, re-render comprador.
             if (VIEW_MODE === 'comprador') {
@@ -2598,6 +2660,10 @@
                 if (fProdC) fProdC.value = 'all';
                 var prodTxtC = document.getElementById('prodTriggerText');
                 if (prodTxtC) prodTxtC.innerText = 'Todos';
+                var fDestC = document.getElementById('fDest');
+                if (fDestC) fDestC.value = 'all';
+                var destTxtC = document.getElementById('destTriggerText');
+                if (destTxtC) destTxtC.innerText = 'Todas las zonas';
                 // Resetear categoría activa y su resaltado
                 CATEG_ACTIVA = 'all';
                 ['categExportacion','categMolino','categConsumo','categOtros'].forEach(function(id){
@@ -2623,6 +2689,11 @@
 
             document.getElementById('fProd').value = 'all';
             document.getElementById('prodTriggerText').innerText = 'Todos';
+
+            var fDestV = document.getElementById('fDest');
+            if (fDestV) fDestV.value = 'all';
+            var destTxtV = document.getElementById('destTriggerText');
+            if (destTxtV) destTxtV.innerText = 'Todas las zonas';
 
             // Reconstruir lista de vendedores con todo el universo
             if (typeof buildVendorOptions === 'function' && Array.isArray(DB)) {
@@ -2655,6 +2726,10 @@
             const containerProd = document.getElementById('customProdSelect');
             const dropProd = document.getElementById('prodDropdown');
             if(containerProd && !containerProd.contains(e.target) && dropProd && dropProd.classList.contains('show')) dropProd.classList.remove('show');
+
+            const containerDest = document.getElementById('customDestSelect');
+            const dropDest = document.getElementById('destDropdown');
+            if(containerDest && !containerDest.contains(e.target) && dropDest && dropDest.classList.contains('show')) dropDest.classList.remove('show');
 
             const dropComp = document.getElementById('compDropdown');
             const fgComp = document.getElementById('filterGroupComp');
@@ -3805,6 +3880,8 @@ ${totalsRow}
                 if (fProdFiltro !== 'all' && d.cat !== fProdFiltro) return false;
                 if (fCompFiltro !== 'all' && cuitC !== fCompFiltro) return false;
                 if (fCatFiltro !== 'all' && catDe(cuitC) !== fCatFiltro) return false;
+                var fDestC = document.getElementById('fDest') ? document.getElementById('fDest').value : 'all';
+                if (fDestC !== 'all' && zonaDeDestino(d.destino) !== fDestC) return false;
                 return true;
             });
 
@@ -3879,6 +3956,7 @@ ${totalsRow}
         function runEngine(){
             fillBudgetTable();
             const fr=document.getElementById('fRep').value, fv=document.getElementById('fVend').value, fp=document.getElementById('fProd').value;
+            const fDest=document.getElementById('fDest')?document.getElementById('fDest').value:'all';
             const normFr=fr==='all'?'all':normalize(fr);
             
             // Auto-seleccionar la pestaña del gráfico según el producto filtrado
@@ -3899,10 +3977,11 @@ ${totalsRow}
                         vendMatch = ('NAME_' + d.v === fv);
                     }
                 }
-                return repMatch && prodMatch && vendMatch;
+                let destMatch = (fDest === 'all' || zonaDeDestino(d.destino) === fDest);
+                return repMatch && prodMatch && vendMatch && destMatch;
             });
 
-            const contextClientTable = DB.filter(d => (fr === 'all' || d.r === normFr) && (fp === 'all' || d.cat === fp));
+            const contextClientTable = DB.filter(d => (fr === 'all' || d.r === normFr) && (fp === 'all' || d.cat === fp) && (fDest === 'all' || zonaDeDestino(d.destino) === fDest));
             const isGlobal = (fr === 'all' && fv === 'all' && fp === 'all');
             
             updateStrips(context, isGlobal);
