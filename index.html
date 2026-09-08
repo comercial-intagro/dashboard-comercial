@@ -507,14 +507,18 @@
         .modal-content {
             background: white; border-radius: var(--radius-lg);
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            display: flex; flex-direction: column; max-height: 95vh; padding: 25px; overflow: hidden;
+            display: flex; flex-direction: column; padding: 25px; overflow: hidden;
         }
-        #budgetModal .modal-content  { width: 1320px; max-width: 98%; }
-        #harvestModal .modal-content { width: 750px; max-width: 95%; }
-        #historyModal .modal-content { width: 1100px; max-width: 95%; }
-        #sioModal .modal-content { width: 1320px; max-width: 98%; }
-        #prodNacModal .modal-content { width: 1500px; max-width: 98%; }
-        #canjModal .modal-content { width: 1380px; max-width: 98%; }
+        /* Todos los modales full screen en ancho, alto ajustable al contenido (máx 94vh) */
+        .modal-content,
+        #budgetModal .modal-content,
+        #historyModal .modal-content,
+        #sioModal .modal-content,
+        #prodNacModal .modal-content,
+        #canjModal .modal-content,
+        #categModal .modal-content {
+            width: 96vw; max-width: 96vw; height: auto; max-height: 94vh;
+        }
 
         /* === MODAL CANJEADORES === */
         .canj-tabs { display: flex; gap: 4px; align-items: center; background: #f1f5f9; padding: 4px; border-radius: 50px; border: 1px solid #e2e8f0; }
@@ -853,28 +857,6 @@
         </div>
     </div>
 
-    <div id="harvestModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-header-top">
-                    <div><h2 style="color:var(--primary);font-weight:800;font-size:1.2rem;">Evolución por Cosechas</h2></div>
-                    <div class="close-btn" onclick="toggleModal('harvestModal',false)"><i class="ri-close-line"></i></div>
-                </div>
-            </div>
-            <div class="harvest-modal-grid">
-                <div class="h-modal-card" id="h2021"><div class="h-modal-lbl">20/21</div><div class="h-modal-val">-</div></div>
-                <div class="h-modal-card" id="h2122"><div class="h-modal-lbl">21/22</div><div class="h-modal-val">-</div></div>
-                <div class="h-modal-card" id="h2223"><div class="h-modal-lbl">22/23</div><div class="h-modal-val">-</div></div>
-                <div class="h-modal-card" id="h2324"><div class="h-modal-lbl">23/24</div><div class="h-modal-val">-</div></div>
-                <div class="h-modal-card" id="h2425"><div class="h-modal-lbl">24/25</div><div class="h-modal-val">-</div></div>
-                <div class="h-modal-card" id="h2526"><div class="h-modal-lbl">25/26</div><div class="h-modal-val">-</div></div>
-            </div>
-            <div class="harvest-chart-container">
-                <canvas id="cHarvest" style="width:100%;height:100%;"></canvas>
-            </div>
-        </div>
-    </div>
-
     <div id="historyModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header" style="border-bottom:none;margin-bottom:0;">
@@ -986,7 +968,7 @@
     </div>
 
     <div id="categModal" class="modal-overlay">
-        <div class="modal-content" style="width: 900px; max-width: 95%;">
+        <div class="modal-content">
             <div class="modal-header" style="border-bottom:none;margin-bottom:0;">
                 <div style="display:flex;align-items:center;gap:12px;">
                     <i class="ri-price-tag-3-line" style="font-size:1.6rem;color:var(--primary);"></i>
@@ -1026,7 +1008,7 @@
     </div>
 
     <div id="prodNacModal" class="modal-overlay">
-        <div class="modal-content" style="width: 1150px; max-width: 95%;">
+        <div class="modal-content">
             <div class="modal-header" style="border-bottom:none;margin-bottom:0;">
                 <div class="modal-header-top">
                     <div>
@@ -1163,7 +1145,6 @@
                 <div class="tools-section" id="toolsSection">
                     <label class="filter-label">HERRAMIENTAS</label>
                     <button class="btn-sec" onclick="toggleModal('budgetModal',true)"><i class="ri-bar-chart-2-fill"></i> Presupuesto 2026</button>
-                    <button class="btn-sec" onclick="toggleModal('harvestModal',true)"><i class="ri-plant-fill"></i> Ver Cosechas</button>
                     <button class="btn-sec" onclick="toggleModal('historyModal',true)"><i class="ri-grid-fill"></i> Vol Histórico Intagro</button>
                     <button class="btn-sec" onclick="toggleModal('canjModal',true)"><i class="ri-exchange-funds-fill"></i> Canjeadores</button>
                     <button class="btn-sec" onclick="toggleModal('sioModal',true)"><i class="ri-line-chart-fill"></i> Histórico SIO Granos</button>
@@ -4170,7 +4151,6 @@ ${totalsRow}
             if(historyFilter&&fr!==historyFilter.value){historyFilter.value=fr;}
             generateHistoryTable();
             generateProdNacTable();
-            updateHarvest(context);
         }
 
         function updateStrips(data, showShare = true) {
@@ -5078,7 +5058,7 @@ ${totalsRow}
         function toggleModal(id, show) {
             // Seguridad Fase 2: los modales de mercado/herramientas son solo para gerenciales.
             // Si un no-gerencial intenta abrir uno (incluso por consola), se bloquea.
-            const modalesGerenciales = ['budgetModal','harvestModal','historyModal','canjModal','sioModal','prodNacModal','categModal'];
+            const modalesGerenciales = ['budgetModal','historyModal','canjModal','sioModal','prodNacModal','categModal'];
             if (show && USER_ROL !== 'GERENCIAL' && modalesGerenciales.indexOf(id) !== -1) {
                 return;
             }
