@@ -4162,8 +4162,8 @@ ${totalsRow}
             
             document.getElementById('kTargetMonth').innerText=dailyTarget>0?dailyTarget.toLocaleString('de-DE',{maximumFractionDigits:0})+" Tn / Día":"-";
             
-            const isClientOrProdFiltered = (fv !== 'all' || fp !== 'all');
-            const hideShareSio = (fr !== 'all' || fv !== 'all'); 
+            const isClientOrProdFiltered = (fv !== 'all' || fp !== 'all' || fDest !== 'all');
+            const hideShareSio = (fr !== 'all' || fv !== 'all' || fDest !== 'all'); 
             generateExecutionTable(context,target,d26,lacksHistory?globalHistoric:context,lacksHistory, isClientOrProdFiltered, hideShareSio, passedWorkingDays, totalWorkingDaysMonth);
             
             const historyFilter=document.getElementById('historyRepFilter');
