@@ -472,11 +472,15 @@
         .exec-tab.active { background: var(--primary); color: #fff; }
         .exec-tab:hover:not(.active) { background: #e2e8f0; }
         /* Matriz Producto x Destino */
-        .matriz-table th { font-size: 0.7rem; padding: 10px 4px; }
-        .matriz-table td { padding: 1.1vh 4px; text-align: center; vertical-align: middle; }
-        .matriz-table td:first-child { text-align: left; }
-        .matriz-table td .matriz-vol { font-size: 0.85rem; font-weight: 800; color: #1e293b; line-height: 1.2; }
-        .matriz-table td .matriz-pct { font-size: 0.72rem; color: #64748b; font-weight: 800; line-height: 1.2; margin-top: 1px; }
+        .matriz-table th { font-size: 0.68rem; padding: 8px 6px; text-align: right; }
+        .matriz-table th:first-child { text-align: left; }
+        .matriz-table td { padding: 0.55vh 6px; text-align: right; vertical-align: middle; }
+        .matriz-table td.matriz-destino { text-align: left; font-size: 0.8rem; font-weight: 800; color: var(--text-main); }
+        .matriz-table td .matriz-vol { font-size: 0.8rem; font-weight: 800; color: #1e293b; line-height: 1.3; }
+        .matriz-table td .matriz-pct {
+            display: inline-block; font-size: 0.68rem; font-weight: 800; line-height: 1;
+            padding: 2px 7px; border-radius: 5px; margin-top: 3px;
+        }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .exec-table th {
             position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.7rem;
@@ -4403,13 +4407,30 @@ ${totalsRow}
             tbody.innerHTML = '';
             ZONAS.forEach(function(z){
                 var totalFila = PRODUCTOS.reduce(function(a,p){ return a+matriz[z][p]; }, 0);
+                // Calcular min y max de la fila para la escala de color del %
+                var valsFila = PRODUCTOS.map(function(p){ return matriz[z][p]; }).filter(function(v){ return v>0; });
+                var minR = valsFila.length ? Math.min.apply(null, valsFila) : 0;
+                var maxR = valsFila.length ? Math.max.apply(null, valsFila) : 0;
+                function colorPct(v){
+                    var bg='#f1f5f9', col='#94a3b8';
+                    if (maxR>0 && maxR!==minR){
+                        var t=(v-minR)/(maxR-minR);
+                        if (t>0.85){bg='#dcfce7';col='#065f46';}
+                        else if(t>0.55){bg='#fef9c3';col='#854d0e';}
+                        else if(t>0.20){bg='#ffedd5';col='#9a3412';}
+                        else{bg='#fee2e2';col='#991b1b';}
+                    } else if (maxR>0 && maxR===minR){ bg='#dcfce7'; col='#065f46'; }
+                    return {bg:bg,col:col};
+                }
                 var tr = document.createElement('tr');
-                var celdas = '<td style="text-align:left;font-weight:800;">' + ZONA_LABEL[z] + '</td>';
+                var celdas = '<td class="matriz-destino">' + ZONA_LABEL[z] + '</td>';
                 PRODUCTOS.forEach(function(p){
                     var v = matriz[z][p];
                     if (v > 0) {
                         var pct = totalFila>0 ? (v/totalFila*100).toFixed(0) : 0;
-                        celdas += '<td><div class="matriz-vol">' + fmt(v) + '</div><div class="matriz-pct">' + pct + '%</div></td>';
+                        var c = colorPct(v);
+                        celdas += '<td><div class="matriz-vol">' + fmt(v) + '</div>' +
+                                  '<div class="matriz-pct" style="background:'+c.bg+';color:'+c.col+';">' + pct + '%</div></td>';
                     } else {
                         celdas += '<td>-</td>';
                     }
@@ -4420,11 +4441,11 @@ ${totalsRow}
             // Fila TOTAL (volumen por producto + % sobre el total general de la matriz)
             var granTotal = PRODUCTOS.reduce(function(a,p){ return a+totalProd[p]; }, 0);
             var trTot = document.createElement('tr');
-            var tc = '<td style="text-align:left;">TOTAL</td>';
+            var tc = '<td class="matriz-destino">TOTAL</td>';
             PRODUCTOS.forEach(function(p){
                 if (totalProd[p] > 0) {
                     var pctT = granTotal>0 ? (totalProd[p]/granTotal*100).toFixed(0) : 0;
-                    tc += '<td><div class="matriz-vol">' + fmt(totalProd[p]) + '</div><div class="matriz-pct">' + pctT + '%</div></td>';
+                    tc += '<td><div class="matriz-vol">' + fmt(totalProd[p]) + '</div><div class="matriz-pct" style="background:#e2e8f0;color:#475569;">' + pctT + '%</div></td>';
                 } else {
                     tc += '<td>-</td>';
                 }
