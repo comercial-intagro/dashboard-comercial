@@ -3178,12 +3178,14 @@ ${totalsRow}
                 var base = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
                 var fpChart = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
                 var fcChart = document.getElementById('fComp') ? document.getElementById('fComp').value : 'all';
+                var fdChart = document.getElementById('fDest') ? document.getElementById('fDest').value : 'all';
                 data = base.filter(function(d){
                     var cc = String(d.cuitComp||'').replace(/\D/g,'');
                     if (!cc || cc === ARGC) return false;
                     if (fpChart !== 'all' && d.cat !== fpChart) return false;
                     if (fcChart !== 'all' && cc !== fcChart) return false;
                     if (CATEG_ACTIVA !== 'all' && (CATEG_COMPRADORES[cc]||'Otros') !== CATEG_ACTIVA) return false;
+                    if (fdChart !== 'all' && zonaDeDestino(d.destino) !== fdChart) return false;
                     return true;
                 });
             } else {
