@@ -472,9 +472,11 @@
         .exec-tab.active { background: var(--primary); color: #fff; }
         .exec-tab:hover:not(.active) { background: #e2e8f0; }
         /* Matriz Producto x Destino */
-        .matriz-table th { font-size: 0.62rem; padding: 8px 4px; }
-        .matriz-table td { padding: 0.5vh 4px; font-size: 0.68rem; }
-        .matriz-table td .matriz-pct { font-size: 0.55rem; color: #94a3b8; font-weight: 700; }
+        .matriz-table th { font-size: 0.7rem; padding: 10px 4px; }
+        .matriz-table td { padding: 1.1vh 4px; text-align: center; vertical-align: middle; }
+        .matriz-table td:first-child { text-align: left; }
+        .matriz-table td .matriz-vol { font-size: 0.85rem; font-weight: 800; color: #1e293b; line-height: 1.2; }
+        .matriz-table td .matriz-pct { font-size: 0.72rem; color: #64748b; font-weight: 800; line-height: 1.2; margin-top: 1px; }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .exec-table th {
             position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.7rem;
@@ -1387,12 +1389,12 @@
                                 <thead>
                                     <tr>
                                         <th style="text-align:left;">Destino</th>
-                                        <th style="text-align:right;">Soja</th>
-                                        <th style="text-align:right;">Maíz</th>
-                                        <th style="text-align:right;">Trigo</th>
-                                        <th style="text-align:right;">Girasol</th>
-                                        <th style="text-align:right;">Sorgo</th>
-                                        <th style="text-align:right;">Cebada</th>
+                                        <th style="text-align:center;">Soja</th>
+                                        <th style="text-align:center;">Maíz</th>
+                                        <th style="text-align:center;">Trigo</th>
+                                        <th style="text-align:center;">Girasol</th>
+                                        <th style="text-align:center;">Sorgo</th>
+                                        <th style="text-align:center;">Cebada</th>
                                     </tr>
                                 </thead>
                                 <tbody id="matrizTableBody"></tbody>
@@ -4407,7 +4409,7 @@ ${totalsRow}
                     var v = matriz[z][p];
                     if (v > 0) {
                         var pct = totalFila>0 ? (v/totalFila*100).toFixed(0) : 0;
-                        celdas += '<td>' + fmt(v) + '<div class="matriz-pct">' + pct + '%</div></td>';
+                        celdas += '<td><div class="matriz-vol">' + fmt(v) + '</div><div class="matriz-pct">' + pct + '%</div></td>';
                     } else {
                         celdas += '<td>-</td>';
                     }
@@ -4415,10 +4417,18 @@ ${totalsRow}
                 tr.innerHTML = celdas;
                 tbody.appendChild(tr);
             });
-            // Fila TOTAL (volumen por producto, sin %)
+            // Fila TOTAL (volumen por producto + % sobre el total general de la matriz)
+            var granTotal = PRODUCTOS.reduce(function(a,p){ return a+totalProd[p]; }, 0);
             var trTot = document.createElement('tr');
             var tc = '<td style="text-align:left;">TOTAL</td>';
-            PRODUCTOS.forEach(function(p){ tc += '<td>' + (totalProd[p]>0?fmt(totalProd[p]):'-') + '</td>'; });
+            PRODUCTOS.forEach(function(p){
+                if (totalProd[p] > 0) {
+                    var pctT = granTotal>0 ? (totalProd[p]/granTotal*100).toFixed(0) : 0;
+                    tc += '<td><div class="matriz-vol">' + fmt(totalProd[p]) + '</div><div class="matriz-pct">' + pctT + '%</div></td>';
+                } else {
+                    tc += '<td>-</td>';
+                }
+            });
             trTot.innerHTML = tc;
             tbody.appendChild(trTot);
         }
