@@ -473,8 +473,8 @@
         .exec-tab:hover:not(.active) { background: #e2e8f0; }
         /* Matriz Producto x Destino */
         .matriz-table th { font-size: 0.62rem; padding: 8px 4px; }
-        .matriz-table td { padding: 0.5vh 4px; font-size: 0.78rem; font-weight: 800; color: #1e293b; }
-        .matriz-table td .matriz-pct { font-size: 0.7rem; color: #64748b; font-weight: 800; }
+        .matriz-table td { padding: 0.5vh 4px; font-size: 0.68rem; }
+        .matriz-table td .matriz-pct { font-size: 0.55rem; color: #94a3b8; font-weight: 700; }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .exec-table th {
             position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.7rem;
@@ -4407,7 +4407,7 @@ ${totalsRow}
                     var v = matriz[z][p];
                     if (v > 0) {
                         var pct = totalFila>0 ? (v/totalFila*100).toFixed(0) : 0;
-                        celdas += '<td>' + fmt(v) + ' - <span class="matriz-pct">' + pct + '%</span></td>';
+                        celdas += '<td>' + fmt(v) + '<div class="matriz-pct">' + pct + '%</div></td>';
                     } else {
                         celdas += '<td>-</td>';
                     }
@@ -4415,18 +4415,10 @@ ${totalsRow}
                 tr.innerHTML = celdas;
                 tbody.appendChild(tr);
             });
-            // Fila TOTAL (volumen por producto + % sobre el total general de la matriz)
-            var granTotal = PRODUCTOS.reduce(function(a,p){ return a+totalProd[p]; }, 0);
+            // Fila TOTAL (volumen por producto, sin %)
             var trTot = document.createElement('tr');
             var tc = '<td style="text-align:left;">TOTAL</td>';
-            PRODUCTOS.forEach(function(p){
-                if (totalProd[p] > 0) {
-                    var pctT = granTotal>0 ? (totalProd[p]/granTotal*100).toFixed(0) : 0;
-                    tc += '<td>' + fmt(totalProd[p]) + ' - <span class="matriz-pct">' + pctT + '%</span></td>';
-                } else {
-                    tc += '<td>-</td>';
-                }
-            });
+            PRODUCTOS.forEach(function(p){ tc += '<td>' + (totalProd[p]>0?fmt(totalProd[p]):'-') + '</td>'; });
             trTot.innerHTML = tc;
             tbody.appendChild(trTot);
         }
