@@ -474,7 +474,7 @@
         /* Matriz Producto x Destino */
         .matriz-table th { font-size: 0.68rem; padding: 8px 6px; text-align: right; }
         .matriz-table th:first-child { text-align: left; }
-        .matriz-table td { padding: 0.7vh 6px; text-align: right; vertical-align: middle; white-space: nowrap; }
+        .matriz-table td { padding: 1.4vh 6px; text-align: right; vertical-align: middle; white-space: nowrap; }
         .matriz-table td.matriz-destino { text-align: left; font-size: 0.8rem; font-weight: 800; color: var(--text-main); }
         .matriz-table td .matriz-vol { font-size: 0.8rem; font-weight: 800; color: #1e293b; }
         .matriz-table td .matriz-pct {
@@ -487,9 +487,14 @@
             line-height: 1; display: inline-flex; align-items: center; justify-content: center;
         }
         .matriz-toggle-btn:hover { background: var(--primary-dark, #0f5132); }
-        /* Modo expandido (6 productos): scroll horizontal, columnas con ancho mínimo */
-        #execMatrizContainer.matriz-scroll { overflow-x: auto; }
-        #execMatrizContainer.matriz-scroll .matriz-table { min-width: 900px; }
+        /* Modo expandido (6 productos): scroll horizontal con barra siempre visible */
+        #execMatrizContainer.matriz-scroll { overflow-x: scroll; }
+        #execMatrizContainer.matriz-scroll .matriz-table { min-width: 780px; }
+        /* Barra de scroll horizontal visible y estilizada */
+        #execMatrizContainer.matriz-scroll::-webkit-scrollbar { height: 10px; }
+        #execMatrizContainer.matriz-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
+        #execMatrizContainer.matriz-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 5px; }
+        #execMatrizContainer.matriz-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .exec-table th {
             position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.7rem;
