@@ -474,13 +474,22 @@
         /* Matriz Producto x Destino */
         .matriz-table th { font-size: 0.68rem; padding: 8px 6px; text-align: right; }
         .matriz-table th:first-child { text-align: left; }
-        .matriz-table td { padding: 0.55vh 6px; text-align: right; vertical-align: middle; }
+        .matriz-table td { padding: 0.7vh 6px; text-align: right; vertical-align: middle; white-space: nowrap; }
         .matriz-table td.matriz-destino { text-align: left; font-size: 0.8rem; font-weight: 800; color: var(--text-main); }
-        .matriz-table td .matriz-vol { font-size: 0.8rem; font-weight: 800; color: #1e293b; line-height: 1.3; }
+        .matriz-table td .matriz-vol { font-size: 0.8rem; font-weight: 800; color: #1e293b; }
         .matriz-table td .matriz-pct {
-            display: inline-block; font-size: 0.68rem; font-weight: 800; line-height: 1;
-            padding: 2px 7px; border-radius: 5px; margin-top: 3px;
+            display: inline-block; font-size: 0.66rem; font-weight: 800; line-height: 1;
+            padding: 2px 5px; border-radius: 4px; margin-left: 3px;
         }
+        .matriz-toggle-btn {
+            border: none; background: var(--primary); color: #fff; cursor: pointer;
+            width: 22px; height: 22px; border-radius: 5px; font-weight: 900; font-size: 0.9rem;
+            line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .matriz-toggle-btn:hover { background: var(--primary-dark, #0f5132); }
+        /* Modo expandido (6 productos): scroll horizontal, columnas con ancho mínimo */
+        #execMatrizContainer.matriz-scroll { overflow-x: auto; }
+        #execMatrizContainer.matriz-scroll .matriz-table { min-width: 900px; }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .exec-table th {
             position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.7rem;
@@ -1391,15 +1400,7 @@
                         <div class="exec-table-container" id="execMatrizContainer" style="display:none;">
                             <table class="exec-table matriz-table">
                                 <thead>
-                                    <tr>
-                                        <th style="text-align:left;">Destino</th>
-                                        <th style="text-align:center;">Soja</th>
-                                        <th style="text-align:center;">Maíz</th>
-                                        <th style="text-align:center;">Trigo</th>
-                                        <th style="text-align:center;">Girasol</th>
-                                        <th style="text-align:center;">Sorgo</th>
-                                        <th style="text-align:center;">Cebada</th>
-                                    </tr>
+                                    <tr id="matrizTableHead"></tr>
                                 </thead>
                                 <tbody id="matrizTableBody"></tbody>
                             </table>
@@ -4353,11 +4354,25 @@ ${totalsRow}
 
         // Calcula y renderiza la matriz zona (filas) x producto (columnas) del ejercicio 2026.
         // Responde solo al filtro de comprador (vista compradora) o vendedor (vista vendedora).
+        // Variable de estado: si Sorgo y Cebada están expandidos en la matriz
+        let MATRIZ_EXPANDIDA = false;
+        function toggleMatrizProductos(){
+            MATRIZ_EXPANDIDA = !MATRIZ_EXPANDIDA;
+            renderMatrizProductoDestino();
+        }
+
         function renderMatrizProductoDestino(){
             var tbody = document.getElementById('matrizTableBody');
-            if (!tbody) return;
+            var thead = document.getElementById('matrizTableHead');
+            if (!tbody || !thead) return;
+            // Scroll horizontal solo en modo expandido (6 productos)
+            var cont = document.getElementById('execMatrizContainer');
+            if (cont) cont.classList.toggle('matriz-scroll', MATRIZ_EXPANDIDA);
             var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
-            var PRODUCTOS = ['SOJA','MAIZ','TRIGO','GIRASOL','SORGO','CEBADA'];
+            var PRODUCTOS_ALL = ['SOJA','MAIZ','TRIGO','GIRASOL','SORGO','CEBADA'];
+            var PROD_LABEL = {'SOJA':'Soja','MAIZ':'Maíz','TRIGO':'Trigo','GIRASOL':'Girasol','SORGO':'Sorgo','CEBADA':'Cebada'};
+            // Productos visibles: 4 por defecto, 6 si está expandido
+            var PRODUCTOS_VIS = MATRIZ_EXPANDIDA ? PRODUCTOS_ALL : ['SOJA','MAIZ','TRIGO','GIRASOL'];
             var ZONAS = ['ZONA ROSARIO TOTAL','ZONA BAHIA BLANCA','ZONA QUEQUEN','ZONA LIMA/ TLP','ZONA RAMALLO','ZONA JUNIN','ZONA DEL GUAZU','OTROS'];
             var ZONA_LABEL = {'ZONA ROSARIO TOTAL':'Rosario','ZONA BAHIA BLANCA':'Bahía Blanca','ZONA QUEQUEN':'Quequén','ZONA LIMA/ TLP':'Lima/TLP','ZONA RAMALLO':'Ramallo','ZONA JUNIN':'Junín','ZONA DEL GUAZU':'del Guazú','OTROS':'Otros'};
 
@@ -4375,7 +4390,6 @@ ${totalsRow}
                     return true;
                 });
             } else {
-                // Vista vendedora: usa DB, respeta filtro de vendedor y representante
                 var fr = document.getElementById('fRep').value;
                 var fv = document.getElementById('fVend').value;
                 var normFr = (fr==='all')?'all':normalize(fr);
@@ -4390,66 +4404,77 @@ ${totalsRow}
                 });
             }
 
-            // Acumular: zona -> producto -> vol
+            // Acumular sobre los 6 productos (el % siempre se calcula sobre los 6)
             var matriz = {};
-            ZONAS.forEach(function(z){ matriz[z]={}; PRODUCTOS.forEach(function(p){ matriz[z][p]=0; }); });
-            var totalProd = {}; PRODUCTOS.forEach(function(p){ totalProd[p]=0; });
+            ZONAS.forEach(function(z){ matriz[z]={}; PRODUCTOS_ALL.forEach(function(p){ matriz[z][p]=0; }); });
+            var totalProd = {}; PRODUCTOS_ALL.forEach(function(p){ totalProd[p]=0; });
             universo.forEach(function(d){
                 var z = zonaDeDestino(d.destino);
-                if (!matriz[z]) return; // zona fuera de las 8 (no debería pasar)
-                var p = (PRODUCTOS.indexOf(d.cat)>=0) ? d.cat : null;
-                if (!p) return; // producto fuera de los 6 (ej: VARIOS) no se muestra
+                if (!matriz[z]) return;
+                var p = (PRODUCTOS_ALL.indexOf(d.cat)>=0) ? d.cat : null;
+                if (!p) return;
                 matriz[z][p] += d.vol;
                 totalProd[p] += d.vol;
             });
 
-            // Render filas (zonas)
+            // Encabezado dinámico
+            var btnLabel = MATRIZ_EXPANDIDA ? '−' : '+';
+            var btnTitle = MATRIZ_EXPANDIDA ? 'Ocultar Sorgo y Cebada' : 'Ver Sorgo y Cebada';
+            var thHtml = '<th style="text-align:left;">Destino</th>';
+            PRODUCTOS_VIS.forEach(function(p){ thHtml += '<th style="text-align:right;">' + PROD_LABEL[p] + '</th>'; });
+            thHtml += '<th style="text-align:center;width:34px;"><button class="matriz-toggle-btn" onclick="toggleMatrizProductos()" title="'+btnTitle+'">'+btnLabel+'</button></th>';
+            thead.innerHTML = thHtml;
+
+            function colorPct(v, minR, maxR){
+                var bg='#f1f5f9', col='#94a3b8';
+                if (maxR>0 && maxR!==minR){
+                    var t=(v-minR)/(maxR-minR);
+                    if (t>0.85){bg='#dcfce7';col='#065f46';}
+                    else if(t>0.55){bg='#fef9c3';col='#854d0e';}
+                    else if(t>0.20){bg='#ffedd5';col='#9a3412';}
+                    else{bg='#fee2e2';col='#991b1b';}
+                } else if (maxR>0 && maxR===minR){ bg='#dcfce7'; col='#065f46'; }
+                return {bg:bg,col:col};
+            }
+
+            // Filas (zonas)
             tbody.innerHTML = '';
             ZONAS.forEach(function(z){
-                var totalFila = PRODUCTOS.reduce(function(a,p){ return a+matriz[z][p]; }, 0);
-                // Calcular min y max de la fila para la escala de color del %
-                var valsFila = PRODUCTOS.map(function(p){ return matriz[z][p]; }).filter(function(v){ return v>0; });
-                var minR = valsFila.length ? Math.min.apply(null, valsFila) : 0;
-                var maxR = valsFila.length ? Math.max.apply(null, valsFila) : 0;
-                function colorPct(v){
-                    var bg='#f1f5f9', col='#94a3b8';
-                    if (maxR>0 && maxR!==minR){
-                        var t=(v-minR)/(maxR-minR);
-                        if (t>0.85){bg='#dcfce7';col='#065f46';}
-                        else if(t>0.55){bg='#fef9c3';col='#854d0e';}
-                        else if(t>0.20){bg='#ffedd5';col='#9a3412';}
-                        else{bg='#fee2e2';col='#991b1b';}
-                    } else if (maxR>0 && maxR===minR){ bg='#dcfce7'; col='#065f46'; }
-                    return {bg:bg,col:col};
-                }
+                // % sobre el total de la fila con los 6 productos
+                var totalFila6 = PRODUCTOS_ALL.reduce(function(a,p){ return a+matriz[z][p]; }, 0);
+                // Escala de color sobre los productos VISIBLES
+                var valsVis = PRODUCTOS_VIS.map(function(p){ return matriz[z][p]; }).filter(function(v){ return v>0; });
+                var minR = valsVis.length ? Math.min.apply(null, valsVis) : 0;
+                var maxR = valsVis.length ? Math.max.apply(null, valsVis) : 0;
                 var tr = document.createElement('tr');
                 var celdas = '<td class="matriz-destino">' + ZONA_LABEL[z] + '</td>';
-                PRODUCTOS.forEach(function(p){
+                PRODUCTOS_VIS.forEach(function(p){
                     var v = matriz[z][p];
                     if (v > 0) {
-                        var pct = totalFila>0 ? (v/totalFila*100).toFixed(0) : 0;
-                        var c = colorPct(v);
-                        celdas += '<td><div class="matriz-vol">' + fmt(v) + '</div>' +
-                                  '<div class="matriz-pct" style="background:'+c.bg+';color:'+c.col+';">' + pct + '%</div></td>';
+                        var pct = totalFila6>0 ? (v/totalFila6*100).toFixed(0) : 0;
+                        var c = colorPct(v, minR, maxR);
+                        celdas += '<td><span class="matriz-vol">' + fmt(v) + '</span> <span class="matriz-pct" style="background:'+c.bg+';color:'+c.col+';">' + pct + '%</span></td>';
                     } else {
                         celdas += '<td>-</td>';
                     }
                 });
+                celdas += '<td></td>'; // columna del botón
                 tr.innerHTML = celdas;
                 tbody.appendChild(tr);
             });
-            // Fila TOTAL (volumen por producto + % sobre el total general de la matriz)
-            var granTotal = PRODUCTOS.reduce(function(a,p){ return a+totalProd[p]; }, 0);
+            // Fila TOTAL
+            var granTotal = PRODUCTOS_ALL.reduce(function(a,p){ return a+totalProd[p]; }, 0);
             var trTot = document.createElement('tr');
             var tc = '<td class="matriz-destino">TOTAL</td>';
-            PRODUCTOS.forEach(function(p){
+            PRODUCTOS_VIS.forEach(function(p){
                 if (totalProd[p] > 0) {
                     var pctT = granTotal>0 ? (totalProd[p]/granTotal*100).toFixed(0) : 0;
-                    tc += '<td><div class="matriz-vol">' + fmt(totalProd[p]) + '</div><div class="matriz-pct" style="background:#e2e8f0;color:#475569;">' + pctT + '%</div></td>';
+                    tc += '<td><span class="matriz-vol">' + fmt(totalProd[p]) + '</span> <span class="matriz-pct" style="background:#e2e8f0;color:#475569;">' + pctT + '%</span></td>';
                 } else {
                     tc += '<td>-</td>';
                 }
             });
+            tc += '<td></td>';
             trTot.innerHTML = tc;
             tbody.appendChild(trTot);
         }
