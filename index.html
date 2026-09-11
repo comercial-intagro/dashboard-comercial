@@ -462,6 +462,19 @@
         .exec-title { font-weight: 800; color: var(--primary); font-size: 0.72rem; display: flex; align-items: flex-start; gap: 8px; white-space: nowrap; }
         .exec-icon-bg { background: #dcfce7; color: var(--primary); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 6px; flex-shrink: 0; margin-top: 2px; }
         .exec-table-container { flex: 1; overflow-y: auto; }
+        /* Pestañas del panel de estacionalidad */
+        .exec-tabs { display: flex; gap: 4px; }
+        .exec-tab {
+            border: none; background: #f1f5f9; color: #64748b; cursor: pointer;
+            font-size: 0.62rem; font-weight: 800; padding: 4px 10px; border-radius: 6px;
+            text-transform: uppercase; letter-spacing: 0.3px; transition: all 0.15s;
+        }
+        .exec-tab.active { background: var(--primary); color: #fff; }
+        .exec-tab:hover:not(.active) { background: #e2e8f0; }
+        /* Matriz Producto x Destino */
+        .matriz-table th { font-size: 0.62rem; padding: 8px 4px; }
+        .matriz-table td { padding: 0.5vh 4px; font-size: 0.68rem; }
+        .matriz-table td .matriz-pct { font-size: 0.55rem; color: #94a3b8; font-weight: 700; }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .exec-table th {
             position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.7rem;
@@ -1345,12 +1358,16 @@
                             <div class="exec-title">
                                 <div class="exec-icon-bg"><i class="ri-calendar-check-line"></i></div>
                                 <div style="display:flex; flex-direction:column; gap:1px;">
-                                    <span>Estacionalidad de ventas</span>
-                                    <span style="font-size:0.55rem; color:#94a3b8; font-weight:600; text-transform:none; letter-spacing:0;">(Últimos 5 Ejer)</span>
+                                    <span id="execPanelTitle">Estacionalidad de ventas</span>
+                                    <span id="execPanelSub" style="font-size:0.55rem; color:#94a3b8; font-weight:600; text-transform:none; letter-spacing:0;">(Últimos 5 Ejer)</span>
                                 </div>
                             </div>
+                            <div class="exec-tabs">
+                                <button class="exec-tab active" id="execTabEstacional" onclick="switchExecTab('estacional')">Estacionalidad</button>
+                                <button class="exec-tab" id="execTabMatriz" onclick="switchExecTab('matriz')">Producto × Destino</button>
+                            </div>
                         </div>
-                        <div class="exec-table-container">
+                        <div class="exec-table-container" id="execEstacionalContainer">
                             <table class="exec-table">
                                 <colgroup>
                                     <col style="width:12%">
@@ -1363,6 +1380,22 @@
                                 </colgroup>
                                 <thead><tr><th style="text-align:left;">Mes</th><th style="text-align:center;">Share SIO</th><th style="text-align:right;">2026</th><th style="text-align:right;">% Est</th><th style="text-align:right;">Plan</th><th style="text-align:right;">Desvío</th><th style="text-align:right;">Var%</th></tr></thead>
                                 <tbody id="execTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="exec-table-container" id="execMatrizContainer" style="display:none;">
+                            <table class="exec-table matriz-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left;">Destino</th>
+                                        <th style="text-align:right;">Soja</th>
+                                        <th style="text-align:right;">Maíz</th>
+                                        <th style="text-align:right;">Trigo</th>
+                                        <th style="text-align:right;">Girasol</th>
+                                        <th style="text-align:right;">Sorgo</th>
+                                        <th style="text-align:right;">Cebada</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matrizTableBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -3680,6 +3713,10 @@ ${totalsRow}
 
             // --- Estacionalidad: solo volumen mensual del ejercicio 2026, resto vacío ---
             renderEstacionalidadComprador(r);
+            // Si la pestaña de matriz Producto x Destino está activa, refrescarla
+            if (EXEC_TAB === 'matriz' && typeof renderMatrizProductoDestino === 'function') {
+                renderMatrizProductoDestino();
+            }
         }
 
         // Estacionalidad en modo comprador: muestra el volumen mensual del ejercicio 2026,
@@ -4168,6 +4205,10 @@ ${totalsRow}
             if(historyFilter&&fr!==historyFilter.value){historyFilter.value=fr;}
             generateHistoryTable();
             generateProdNacTable();
+            // Si la pestaña de matriz Producto x Destino está activa, refrescarla
+            if (EXEC_TAB === 'matriz' && typeof renderMatrizProductoDestino === 'function') {
+                renderMatrizProductoDestino();
+            }
         }
 
         function updateStrips(data, showShare = true) {
@@ -4276,6 +4317,110 @@ ${totalsRow}
                 }
                 prevH = h;
             });
+        }
+
+        // ============================================================
+        // Panel estacionalidad: pestañas Estacionalidad / Producto x Destino
+        // ============================================================
+        let EXEC_TAB = 'estacional';
+        function switchExecTab(tab){
+            EXEC_TAB = tab;
+            var tabE = document.getElementById('execTabEstacional');
+            var tabM = document.getElementById('execTabMatriz');
+            var contE = document.getElementById('execEstacionalContainer');
+            var contM = document.getElementById('execMatrizContainer');
+            var titulo = document.getElementById('execPanelTitle');
+            var sub = document.getElementById('execPanelSub');
+            if (tab === 'matriz') {
+                tabM.classList.add('active'); tabE.classList.remove('active');
+                contM.style.display = ''; contE.style.display = 'none';
+                if (titulo) titulo.innerText = 'Producto × Destino';
+                if (sub) sub.innerText = 'Volumen ejercicio 2026 por zona';
+                renderMatrizProductoDestino();
+            } else {
+                tabE.classList.add('active'); tabM.classList.remove('active');
+                contE.style.display = ''; contM.style.display = 'none';
+                if (titulo) titulo.innerText = 'Estacionalidad de ventas';
+                if (sub) sub.innerText = '(Últimos 5 Ejer)';
+            }
+        }
+
+        // Calcula y renderiza la matriz zona (filas) x producto (columnas) del ejercicio 2026.
+        // Responde solo al filtro de comprador (vista compradora) o vendedor (vista vendedora).
+        function renderMatrizProductoDestino(){
+            var tbody = document.getElementById('matrizTableBody');
+            if (!tbody) return;
+            var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
+            var PRODUCTOS = ['SOJA','MAIZ','TRIGO','GIRASOL','SORGO','CEBADA'];
+            var ZONAS = ['ZONA ROSARIO TOTAL','ZONA BAHIA BLANCA','ZONA QUEQUEN','ZONA LIMA/ TLP','ZONA RAMALLO','ZONA JUNIN','ZONA DEL GUAZU','OTROS'];
+            var ZONA_LABEL = {'ZONA ROSARIO TOTAL':'Rosario','ZONA BAHIA BLANCA':'Bahía Blanca','ZONA QUEQUEN':'Quequén','ZONA LIMA/ TLP':'Lima/TLP','ZONA RAMALLO':'Ramallo','ZONA JUNIN':'Junín','ZONA DEL GUAZU':'del Guazú','OTROS':'Otros'};
+
+            // Universo según la vista y sus filtros
+            var ARGC = '30711629048';
+            var universo;
+            if (VIEW_MODE === 'comprador') {
+                var baseC = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
+                var fComp = document.getElementById('fComp') ? document.getElementById('fComp').value : 'all';
+                universo = baseC.filter(function(d){
+                    var cc = String(d.cuitComp||'').replace(/\D/g,'');
+                    if (!cc || cc === ARGC) return false;
+                    if (!(d.e && d.e.indexOf('26')!==-1)) return false;
+                    if (fComp !== 'all' && cc !== fComp) return false;
+                    return true;
+                });
+            } else {
+                // Vista vendedora: usa DB, respeta filtro de vendedor y representante
+                var fr = document.getElementById('fRep').value;
+                var fv = document.getElementById('fVend').value;
+                var normFr = (fr==='all')?'all':normalize(fr);
+                universo = DB.filter(function(d){
+                    if (!(d.e && d.e.indexOf('26')!==-1)) return false;
+                    if (fr!=='all' && d.r!==normFr) return false;
+                    if (fv!=='all') {
+                        if (fv.indexOf('CUIT_')===0) { if('CUIT_'+d.cuitLimpio!==fv) return false; }
+                        else { if('NAME_'+d.v!==fv) return false; }
+                    }
+                    return true;
+                });
+            }
+
+            // Acumular: zona -> producto -> vol
+            var matriz = {};
+            ZONAS.forEach(function(z){ matriz[z]={}; PRODUCTOS.forEach(function(p){ matriz[z][p]=0; }); });
+            var totalProd = {}; PRODUCTOS.forEach(function(p){ totalProd[p]=0; });
+            universo.forEach(function(d){
+                var z = zonaDeDestino(d.destino);
+                if (!matriz[z]) return; // zona fuera de las 8 (no debería pasar)
+                var p = (PRODUCTOS.indexOf(d.cat)>=0) ? d.cat : null;
+                if (!p) return; // producto fuera de los 6 (ej: VARIOS) no se muestra
+                matriz[z][p] += d.vol;
+                totalProd[p] += d.vol;
+            });
+
+            // Render filas (zonas)
+            tbody.innerHTML = '';
+            ZONAS.forEach(function(z){
+                var totalFila = PRODUCTOS.reduce(function(a,p){ return a+matriz[z][p]; }, 0);
+                var tr = document.createElement('tr');
+                var celdas = '<td style="text-align:left;font-weight:800;">' + ZONA_LABEL[z] + '</td>';
+                PRODUCTOS.forEach(function(p){
+                    var v = matriz[z][p];
+                    if (v > 0) {
+                        var pct = totalFila>0 ? (v/totalFila*100).toFixed(0) : 0;
+                        celdas += '<td>' + fmt(v) + '<div class="matriz-pct">' + pct + '%</div></td>';
+                    } else {
+                        celdas += '<td>-</td>';
+                    }
+                });
+                tr.innerHTML = celdas;
+                tbody.appendChild(tr);
+            });
+            // Fila TOTAL (volumen por producto, sin %)
+            var trTot = document.createElement('tr');
+            var tc = '<td style="text-align:left;">TOTAL</td>';
+            PRODUCTOS.forEach(function(p){ tc += '<td>' + (totalProd[p]>0?fmt(totalProd[p]):'-') + '</td>'; });
+            trTot.innerHTML = tc;
+            tbody.appendChild(trTot);
         }
 
         function generateExecutionTable(context, target, d26, contextHist, lacksHistory, isClientOrProdFiltered = false, hideShareSio = false, passedDays = 1, totalDays = 1) {
