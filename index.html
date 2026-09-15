@@ -473,11 +473,11 @@
         .exec-tab:hover:not(.active) { background: #e2e8f0; }
         /* Matriz Producto x Destino */
         /* Matriz Producto x Destino: reglas específicas que ganan sobre .exec-table */
-        table.matriz-table { table-layout: auto !important; }
+        table.matriz-table { table-layout: auto !important; min-width: 820px; }
         .matriz-table th { font-size: 0.68rem; padding: 8px 6px; text-align: right; }
         .matriz-table th:first-child { text-align: left; }
         .matriz-table td, .exec-table.matriz-table td {
-            padding: 1.4vh 8px !important; text-align: right; vertical-align: middle;
+            padding: 0.35vh 8px !important; text-align: right; vertical-align: middle;
             white-space: nowrap; overflow: visible !important; text-overflow: clip !important;
             font-size: 0.8rem;
         }
@@ -487,19 +487,12 @@
             display: inline-block; font-size: 0.66rem; font-weight: 800; line-height: 1;
             padding: 2px 5px; border-radius: 4px; margin-left: 3px;
         }
-        .matriz-toggle-btn {
-            border: none; background: var(--primary); color: #fff; cursor: pointer;
-            width: 22px; height: 22px; border-radius: 5px; font-weight: 900; font-size: 0.9rem;
-            line-height: 1; display: inline-flex; align-items: center; justify-content: center;
-        }
-        .matriz-toggle-btn:hover { background: var(--primary-dark, #0f5132); }
-        /* Modo expandido (6 productos): scroll horizontal con barra siempre visible */
-        #execMatrizContainer.matriz-scroll { overflow-x: scroll !important; }
-        #execMatrizContainer.matriz-scroll table.matriz-table { min-width: 820px; }
-        #execMatrizContainer.matriz-scroll::-webkit-scrollbar { height: 12px; }
-        #execMatrizContainer.matriz-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
-        #execMatrizContainer.matriz-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 6px; }
-        #execMatrizContainer.matriz-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        /* Contenedor de la matriz: solo scroll horizontal, altura según contenido (sin scroll vertical) */
+        #execMatrizContainer { overflow-x: auto; overflow-y: visible; flex: none !important; height: auto !important; }
+        #execMatrizContainer::-webkit-scrollbar { height: 8px; }
+        #execMatrizContainer::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        #execMatrizContainer::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        #execMatrizContainer::-webkit-scrollbar-thumb:hover { background: #64748b; }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .exec-table th {
             position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.7rem;
@@ -4366,24 +4359,14 @@ ${totalsRow}
         // Calcula y renderiza la matriz zona (filas) x producto (columnas) del ejercicio 2026.
         // Responde solo al filtro de comprador (vista compradora) o vendedor (vista vendedora).
         // Variable de estado: si Sorgo y Cebada están expandidos en la matriz
-        let MATRIZ_EXPANDIDA = false;
-        function toggleMatrizProductos(){
-            MATRIZ_EXPANDIDA = !MATRIZ_EXPANDIDA;
-            renderMatrizProductoDestino();
-        }
-
         function renderMatrizProductoDestino(){
             var tbody = document.getElementById('matrizTableBody');
             var thead = document.getElementById('matrizTableHead');
             if (!tbody || !thead) return;
-            // Scroll horizontal solo en modo expandido (6 productos)
-            var cont = document.getElementById('execMatrizContainer');
-            if (cont) cont.classList.toggle('matriz-scroll', MATRIZ_EXPANDIDA);
             var fmt = function(n){ return Math.round(n).toLocaleString('de-DE'); };
             var PRODUCTOS_ALL = ['SOJA','MAIZ','TRIGO','GIRASOL','SORGO','CEBADA'];
             var PROD_LABEL = {'SOJA':'Soja','MAIZ':'Maíz','TRIGO':'Trigo','GIRASOL':'Girasol','SORGO':'Sorgo','CEBADA':'Cebada'};
-            // Productos visibles: 4 por defecto, 6 si está expandido
-            var PRODUCTOS_VIS = MATRIZ_EXPANDIDA ? PRODUCTOS_ALL : ['SOJA','MAIZ','TRIGO','GIRASOL'];
+            var PRODUCTOS_VIS = PRODUCTOS_ALL; // siempre los 6, con scroll horizontal
             var ZONAS = ['ZONA ROSARIO TOTAL','ZONA BAHIA BLANCA','ZONA QUEQUEN','ZONA LIMA/ TLP','ZONA RAMALLO','ZONA JUNIN','ZONA DEL GUAZU','OTROS'];
             var ZONA_LABEL = {'ZONA ROSARIO TOTAL':'Rosario','ZONA BAHIA BLANCA':'Bahía Blanca','ZONA QUEQUEN':'Quequén','ZONA LIMA/ TLP':'Lima/TLP','ZONA RAMALLO':'Ramallo','ZONA JUNIN':'Junín','ZONA DEL GUAZU':'del Guazú','OTROS':'Otros'};
 
@@ -4429,11 +4412,8 @@ ${totalsRow}
             });
 
             // Encabezado dinámico
-            var btnLabel = MATRIZ_EXPANDIDA ? '−' : '+';
-            var btnTitle = MATRIZ_EXPANDIDA ? 'Ocultar Sorgo y Cebada' : 'Ver Sorgo y Cebada';
             var thHtml = '<th style="text-align:left;">Destino</th>';
             PRODUCTOS_VIS.forEach(function(p){ thHtml += '<th style="text-align:right;">' + PROD_LABEL[p] + '</th>'; });
-            thHtml += '<th style="text-align:center;width:34px;"><button class="matriz-toggle-btn" onclick="toggleMatrizProductos()" title="'+btnTitle+'">'+btnLabel+'</button></th>';
             thead.innerHTML = thHtml;
 
             function colorPct(v, minR, maxR){
@@ -4469,7 +4449,6 @@ ${totalsRow}
                         celdas += '<td>-</td>';
                     }
                 });
-                celdas += '<td></td>'; // columna del botón
                 tr.innerHTML = celdas;
                 tbody.appendChild(tr);
             });
@@ -4485,7 +4464,7 @@ ${totalsRow}
                     tc += '<td>-</td>';
                 }
             });
-            tc += '<td></td>';
+            tc += '';
             trTot.innerHTML = tc;
             tbody.appendChild(trTot);
         }
