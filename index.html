@@ -473,35 +473,30 @@
         .exec-tab:hover:not(.active) { background: #e2e8f0; }
         /* Matriz Producto x Destino */
         /* ===== Matriz Producto x Destino ===== */
-        table.matriz-table { table-layout: auto !important; min-width: 780px; width: 100%; }
-        /* Encabezados centrados sobre el contenido de cada columna */
-        .matriz-table th { font-size: 0.66rem; padding: 6px 8px; text-align: center; white-space: nowrap; }
+        table.matriz-table { table-layout: auto !important; width: 100%; min-width: 700px; }
+        /* Encabezados alineados a la derecha, igual que las celdas */
+        .matriz-table th { font-size: 0.64rem; padding: 5px 10px; text-align: right; white-space: nowrap; }
         .matriz-table th:first-child { text-align: left; }
-        /* Celdas: contenido centrado; el volumen y % juntos y centrados en la celda */
+        /* Celdas COMPACTAS: volumen + % en línea, a la derecha */
         .matriz-table td, .exec-table.matriz-table td {
-            padding: 0 8px !important; text-align: center; vertical-align: middle;
+            padding: 4px 10px !important; text-align: right; vertical-align: middle;
             white-space: nowrap; overflow: visible !important; text-overflow: clip !important;
-            font-size: 0.8rem;
+            font-size: 0.78rem; height: auto !important;
         }
-        .matriz-table td.matriz-destino { text-align: left; font-size: 0.8rem; font-weight: 800; color: var(--text-main); }
-        .matriz-table td .matriz-vol { font-size: 0.8rem; font-weight: 800; color: #1e293b; }
+        .matriz-table td.matriz-destino { text-align: left; font-size: 0.78rem; font-weight: 800; color: var(--text-main); }
+        .matriz-table td .matriz-vol { font-size: 0.78rem; font-weight: 800; color: #1e293b; }
         .matriz-table td .matriz-pct {
-            display: inline-block; font-size: 0.66rem; font-weight: 800; line-height: 1;
-            padding: 2px 5px; border-radius: 4px; margin-left: 4px;
+            display: inline-block; font-size: 0.63rem; font-weight: 800; line-height: 1;
+            padding: 2px 5px; border-radius: 4px; margin-left: 5px;
         }
-        /* Contenedor de la matriz: ocupa TODO el alto del panel, distribuye las filas,
-           scroll horizontal con barra sobria visible, sin scroll vertical. */
+        /* Contenedor: ocupa el alto del panel; filas COMPACTAS (no se estiran);
+           scroll horizontal con barra sobria; scroll vertical solo de respaldo. */
         #execMatrizContainer {
             flex: 1 !important; min-height: 0;
-            overflow-x: auto !important; overflow-y: hidden !important;
-            display: flex; flex-direction: column;
+            overflow-x: auto !important; overflow-y: auto !important;
         }
-        #execMatrizContainer table.matriz-table { height: 100%; }
-        /* Distribuir las filas en todo el alto disponible */
-        #execMatrizContainer tbody { }
-        #execMatrizContainer tbody tr { height: auto; }
-        /* Barra de scroll horizontal sobria (sobreescribe el display:none global) */
-        #execMatrizContainer::-webkit-scrollbar { display: block !important; height: 7px; }
+        #execMatrizContainer table.matriz-table { height: auto; }
+        #execMatrizContainer::-webkit-scrollbar { display: block !important; height: 7px; width: 7px; }
         #execMatrizContainer::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         #execMatrizContainer::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         #execMatrizContainer::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
