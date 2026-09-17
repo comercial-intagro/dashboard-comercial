@@ -1986,6 +1986,7 @@
             // Callback global que el Apps Script va a invocar con los datos
             window.onBackendData = function(payload) {
                 try {
+                    window.__loadRetries = 0; // conexión exitosa, resetear contador de reintentos
                     if (!payload || !payload.ok) {
                         showCriticalError(payload && payload.error ? payload.error : "Error desconocido del servidor.");
                         return;
@@ -2105,7 +2106,20 @@
             const script = document.createElement('script');
             script.src = `${BACKEND_URL}?callback=onBackendData&id_token=${encodeURIComponent(__googleIdToken)}&t=${cacheBuster}`;
             script.onerror = function() {
-                showCriticalError("No se pudo conectar al servidor. Verificá tu conexión.");
+                // La primera carga puede fallar si el backend está regenerando la cache
+                // (tarda más y el navegador aborta el script). Reintentamos automáticamente
+                // hasta 2 veces antes de mostrar el error, porque el reintento suele agarrar
+                // la cache ya caliente.
+                if (typeof window.__loadRetries === 'undefined') window.__loadRetries = 0;
+                if (window.__loadRetries < 2) {
+                    window.__loadRetries++;
+                    const loaderTitle = document.getElementById('loaderTitle');
+                    if (loaderTitle) loaderTitle.innerText = "Reintentando conexión (" + window.__loadRetries + ")...";
+                    // Esperar unos segundos y reintentar (da tiempo a que termine la regeneración)
+                    setTimeout(function(){ fetchDashboardData(); }, 4000);
+                } else {
+                    showCriticalError("No se pudo conectar al servidor. Verificá tu conexión y refrescá la página.");
+                }
             };
             document.body.appendChild(script);
 
