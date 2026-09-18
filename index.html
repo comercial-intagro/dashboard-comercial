@@ -4496,50 +4496,68 @@ ${totalsRow}
             requestAnimationFrame(fitMatrizToHeight);
         }
 
-        // Reparte el alto disponible entre las filas de la matriz y escala
-        // fuente + padding para que TODO entre sin scroll vertical y ocupe
-        // toda la grilla (adaptativo entre monitores de distinto tamaño).
+        // Ajusta la matriz para que TODAS las filas entren en el alto real de la
+        // grilla, sin scroll vertical y ocupando todo el espacio. Escala fuente,
+        // padding e interlineado; si aún desborda (monitor chico) itera achicando
+        // hasta que entre. Usa !important porque el CSS de la celda lo tiene.
+        var _matrizFitRetry = 0;
         function fitMatrizToHeight(){
             var container = document.getElementById('execMatrizContainer');
-            if (!container || container.style.display === 'none') return;
+            if (!container || container.offsetParent === null) { _matrizFitRetry = 0; return; }
             var thead = document.getElementById('matrizTableHead');
             var tbody = document.getElementById('matrizTableBody');
             if (!thead || !tbody) return;
 
-            var ch = container.clientHeight;
-            if (ch <= 0) return; // aún no visible / sin layout
+            var ch = container.clientHeight; // ya excluye la barra horizontal
+            if (ch <= 0) { if (_matrizFitRetry++ < 10) setTimeout(fitMatrizToHeight, 50); return; }
+            _matrizFitRetry = 0;
 
-            var bodyRows = tbody.children.length;   // zonas + TOTAL
-            var totalRows = bodyRows + 1;           // + header
+            var totalRows = tbody.children.length + 1; // zonas + TOTAL + header
             if (totalRows <= 1) return;
 
-            // Descontar barra horizontal si aparece (scroll de los 6 productos)
-            var table = container.querySelector('table.matriz-table');
-            var hScroll = (table && table.scrollWidth > container.clientWidth) ? 8 : 0;
-            var rowH = (ch - hScroll) / totalRows;
+            var rowH = ch / totalRows;
+            var vPad  = Math.max(1,   Math.min(rowH * 0.14, 10));
+            var fVol  = Math.max(8.5, Math.min(rowH * 0.42, 16));
+            var fHead = Math.max(8,   Math.min(rowH * 0.34, 12.5));
+            var fPct  = Math.max(7.5, Math.min(rowH * 0.30, 11.5));
 
-            // Escalas derivadas del alto de fila, con topes de legibilidad
-            var vPad  = Math.max(2,   Math.min(rowH * 0.14, 10));
-            var fVol  = Math.max(9.5, Math.min(rowH * 0.40, 16));
-            var fHead = Math.max(9,   Math.min(rowH * 0.32, 12.5));
-            var fPct  = Math.max(8,   Math.min(rowH * 0.28, 11.5));
+            var ths = thead.querySelectorAll('th');
+            var tds = tbody.querySelectorAll('td');
+            var vols = tbody.querySelectorAll('.matriz-vol, .matriz-destino');
+            var pcts = tbody.querySelectorAll('.matriz-pct');
 
-            thead.querySelectorAll('th').forEach(function(th){
-                th.style.paddingTop = vPad + 'px';
-                th.style.paddingBottom = vPad + 'px';
-                th.style.fontSize = fHead + 'px';
-            });
-            tbody.querySelectorAll('td').forEach(function(td){
-                td.style.paddingTop = vPad + 'px';
-                td.style.paddingBottom = vPad + 'px';
-                td.style.fontSize = fVol + 'px'; // cubre celdas "-" y texto suelto
-            });
-            tbody.querySelectorAll('.matriz-vol, .matriz-destino').forEach(function(el){
-                el.style.fontSize = fVol + 'px';
-            });
-            tbody.querySelectorAll('.matriz-pct').forEach(function(el){
-                el.style.fontSize = fPct + 'px';
-            });
+            function apply(){
+                ths.forEach(function(th){
+                    th.style.setProperty('padding-top', vPad + 'px', 'important');
+                    th.style.setProperty('padding-bottom', vPad + 'px', 'important');
+                    th.style.setProperty('font-size', fHead + 'px', 'important');
+                    th.style.setProperty('line-height', '1.1', 'important');
+                });
+                tds.forEach(function(td){
+                    td.style.setProperty('padding-top', vPad + 'px', 'important');
+                    td.style.setProperty('padding-bottom', vPad + 'px', 'important');
+                    td.style.setProperty('font-size', fVol + 'px', 'important');
+                    td.style.setProperty('line-height', '1.1', 'important');
+                });
+                vols.forEach(function(el){ el.style.setProperty('font-size', fVol + 'px', 'important'); });
+                pcts.forEach(function(el){
+                    el.style.setProperty('font-size', fPct + 'px', 'important');
+                    el.style.setProperty('padding', '1px 4px', 'important');
+                });
+            }
+            apply();
+
+            // Si todavía desborda el alto (pantalla chica), achicar hasta que entre.
+            var guard = 0;
+            while (container.scrollHeight > ch + 1 && guard < 14) {
+                vPad  = Math.max(0,   vPad  - 0.6);
+                fVol  = Math.max(7.5, fVol  - 0.6);
+                fHead = Math.max(7,   fHead - 0.5);
+                fPct  = Math.max(6.5, fPct  - 0.4);
+                apply();
+                guard++;
+                if (vPad === 0 && fVol === 7.5) break; // piso alcanzado
+            }
         }
 
         // Reajustar al cambiar el tamaño de la ventana (o de monitor)
