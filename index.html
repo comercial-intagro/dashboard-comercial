@@ -493,9 +493,11 @@
            scroll horizontal con barra sobria; scroll vertical solo de respaldo. */
         #execMatrizContainer {
             flex: 1 !important; min-height: 0;
-            overflow-x: auto !important; overflow-y: auto !important;
+            overflow-x: auto !important; overflow-y: hidden !important;
         }
-        #execMatrizContainer table.matriz-table { height: auto; }
+        /* La tabla ocupa TODO el alto de la grilla: las filas se reparten el espacio
+           (sin scroll vertical). fitMatrizToHeight() escala fuente/padding al alto. */
+        #execMatrizContainer table.matriz-table { height: 100%; }
         #execMatrizContainer::-webkit-scrollbar { display: block !important; height: 7px; width: 7px; }
         #execMatrizContainer::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         #execMatrizContainer::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -4489,7 +4491,65 @@ ${totalsRow}
             tc += '';
             trTot.innerHTML = tc;
             tbody.appendChild(trTot);
+
+            // Ajustar filas al alto de la grilla (sin scroll vertical)
+            requestAnimationFrame(fitMatrizToHeight);
         }
+
+        // Reparte el alto disponible entre las filas de la matriz y escala
+        // fuente + padding para que TODO entre sin scroll vertical y ocupe
+        // toda la grilla (adaptativo entre monitores de distinto tamaño).
+        function fitMatrizToHeight(){
+            var container = document.getElementById('execMatrizContainer');
+            if (!container || container.style.display === 'none') return;
+            var thead = document.getElementById('matrizTableHead');
+            var tbody = document.getElementById('matrizTableBody');
+            if (!thead || !tbody) return;
+
+            var ch = container.clientHeight;
+            if (ch <= 0) return; // aún no visible / sin layout
+
+            var bodyRows = tbody.children.length;   // zonas + TOTAL
+            var totalRows = bodyRows + 1;           // + header
+            if (totalRows <= 1) return;
+
+            // Descontar barra horizontal si aparece (scroll de los 6 productos)
+            var table = container.querySelector('table.matriz-table');
+            var hScroll = (table && table.scrollWidth > container.clientWidth) ? 8 : 0;
+            var rowH = (ch - hScroll) / totalRows;
+
+            // Escalas derivadas del alto de fila, con topes de legibilidad
+            var vPad  = Math.max(2,   Math.min(rowH * 0.14, 10));
+            var fVol  = Math.max(9.5, Math.min(rowH * 0.40, 16));
+            var fHead = Math.max(9,   Math.min(rowH * 0.32, 12.5));
+            var fPct  = Math.max(8,   Math.min(rowH * 0.28, 11.5));
+
+            thead.querySelectorAll('th').forEach(function(th){
+                th.style.paddingTop = vPad + 'px';
+                th.style.paddingBottom = vPad + 'px';
+                th.style.fontSize = fHead + 'px';
+            });
+            tbody.querySelectorAll('td').forEach(function(td){
+                td.style.paddingTop = vPad + 'px';
+                td.style.paddingBottom = vPad + 'px';
+                td.style.fontSize = fVol + 'px'; // cubre celdas "-" y texto suelto
+            });
+            tbody.querySelectorAll('.matriz-vol, .matriz-destino').forEach(function(el){
+                el.style.fontSize = fVol + 'px';
+            });
+            tbody.querySelectorAll('.matriz-pct').forEach(function(el){
+                el.style.fontSize = fPct + 'px';
+            });
+        }
+
+        // Reajustar al cambiar el tamaño de la ventana (o de monitor)
+        var _matrizResizeT;
+        window.addEventListener('resize', function(){
+            clearTimeout(_matrizResizeT);
+            _matrizResizeT = setTimeout(function(){
+                if (EXEC_TAB === 'matriz') fitMatrizToHeight();
+            }, 120);
+        });
 
         function generateExecutionTable(context, target, d26, contextHist, lacksHistory, isClientOrProdFiltered = false, hideShareSio = false, passedDays = 1, totalDays = 1) {
             const tbody = document.getElementById('execTableBody');
