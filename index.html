@@ -474,30 +474,25 @@
         /* Matriz Producto x Destino */
         /* ===== Matriz Producto x Destino ===== */
         table.matriz-table { table-layout: auto !important; width: 100%; min-width: 700px; }
-        /* Encabezados alineados a la derecha, igual que las celdas */
-        .matriz-table th { font-size: 0.64rem; padding: 5px 10px; text-align: right; white-space: nowrap; }
-        .matriz-table th:first-child { text-align: left; }
-        /* Celdas COMPACTAS: volumen + % en línea, a la derecha */
+        /* Estilo espejado de la grilla de Estacionalidad: números 0.7rem/700 y % como
+           texto de color (sin pastilla). Filas compactas de altura natural. */
+        .matriz-table th { font-size: 0.7rem; padding: 0.6vh 8px; font-weight: 700; text-align: right; white-space: nowrap; }
+        .matriz-table th:first-child { text-align: left; padding-left: 10px; }
         .matriz-table td, .exec-table.matriz-table td {
-            padding: 4px 10px !important; text-align: right; vertical-align: middle;
+            padding: 0.4vh 8px !important; text-align: right; vertical-align: middle;
             white-space: nowrap; overflow: visible !important; text-overflow: clip !important;
-            font-size: 0.78rem; height: auto !important;
+            font-size: 0.7rem; height: auto !important;
         }
-        .matriz-table td.matriz-destino { text-align: left; font-size: 0.78rem; font-weight: 800; color: var(--text-main); }
-        .matriz-table td .matriz-vol { font-size: 0.78rem; font-weight: 800; color: #1e293b; }
-        .matriz-table td .matriz-pct {
-            display: inline-block; font-size: 0.63rem; font-weight: 800; line-height: 1;
-            padding: 2px 5px; border-radius: 4px; margin-left: 5px;
-        }
-        /* Contenedor: ocupa el alto del panel; filas COMPACTAS (no se estiran);
-           scroll horizontal con barra sobria; scroll vertical solo de respaldo. */
+        .matriz-table td.matriz-destino { text-align: left; padding-left: 10px; font-size: 0.7rem; font-weight: 800; color: var(--text-main); }
+        .matriz-table td .matriz-vol { font-size: 0.7rem; font-weight: 700; color: var(--text-main); }
+        .matriz-table td .matriz-pct { font-size: 0.62rem; font-weight: 800; margin-left: 5px; }
+        /* Fila TOTAL: hereda el verde/negrita del estilo base .exec-table tr:last-child */
+        /* Contenedor: filas compactas de altura natural (sin estiramiento), sin scroll vertical. */
         #execMatrizContainer {
             flex: 1 !important; min-height: 0;
             overflow-x: auto !important; overflow-y: hidden !important;
         }
-        /* La tabla ocupa TODO el alto de la grilla: las filas se reparten el espacio
-           (sin scroll vertical). fitMatrizToHeight() escala fuente/padding al alto. */
-        #execMatrizContainer table.matriz-table { height: 100%; }
+        #execMatrizContainer table.matriz-table { height: auto; }
         #execMatrizContainer::-webkit-scrollbar { display: block !important; height: 7px; width: 7px; }
         #execMatrizContainer::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         #execMatrizContainer::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -846,7 +841,9 @@
             .exec-header { padding: 0.8vh 1vw; }
             .exec-table th { padding: 0.4vh 2px; font-size: 0.68rem; } 
             .exec-table td { padding: 0.3vh 2px; font-size: 0.65rem; }  
-            .matriz-table td, .exec-table.matriz-table td { padding: 1.1vh 8px !important; font-size: 0.78rem; }
+            .matriz-table td, .exec-table.matriz-table td { padding: 0.3vh 8px !important; font-size: 0.65rem; }
+            .matriz-table th { padding: 0.4vh 8px; font-size: 0.68rem; }
+            .matriz-table td .matriz-vol { font-size: 0.65rem; }
             .exec-table tr:last-child td { font-size: 0.75rem; }
             .client-header { padding: 0.8vh 1vw; }
             .client-table th { padding: 6px 4px; font-size: 0.60rem; }
@@ -4440,16 +4437,17 @@ ${totalsRow}
             PRODUCTOS_VIS.forEach(function(p){ thHtml += '<th style="text-align:right;">' + PROD_LABEL[p] + '</th>'; });
             thead.innerHTML = thHtml;
 
+            // Devuelve SOLO color de texto para el % (estilo estacionalidad, sin pastilla)
             function colorPct(v, minR, maxR){
-                var bg='#f1f5f9', col='#94a3b8';
                 if (maxR>0 && maxR!==minR){
                     var t=(v-minR)/(maxR-minR);
-                    if (t>0.85){bg='#dcfce7';col='#065f46';}
-                    else if(t>0.55){bg='#fef9c3';col='#854d0e';}
-                    else if(t>0.20){bg='#ffedd5';col='#9a3412';}
-                    else{bg='#fee2e2';col='#991b1b';}
-                } else if (maxR>0 && maxR===minR){ bg='#dcfce7'; col='#065f46'; }
-                return {bg:bg,col:col};
+                    if (t>0.85) return '#16a34a';
+                    if (t>0.55) return '#d97706';
+                    if (t>0.20) return '#ea580c';
+                    return '#dc2626';
+                }
+                if (maxR>0 && maxR===minR) return '#16a34a';
+                return '#94a3b8';
             }
 
             // Filas (zonas)
@@ -4468,7 +4466,7 @@ ${totalsRow}
                     if (v > 0) {
                         var pct = totalFila6>0 ? (v/totalFila6*100).toFixed(0) : 0;
                         var c = colorPct(v, minR, maxR);
-                        celdas += '<td><span class="matriz-vol">' + fmt(v) + '</span> <span class="matriz-pct" style="background:'+c.bg+';color:'+c.col+';">' + pct + '%</span></td>';
+                        celdas += '<td><span class="matriz-vol">' + fmt(v) + '</span> <span class="matriz-pct" style="color:'+c+';">' + pct + '%</span></td>';
                     } else {
                         celdas += '<td>-</td>';
                     }
@@ -4483,7 +4481,7 @@ ${totalsRow}
             PRODUCTOS_VIS.forEach(function(p){
                 if (totalProd[p] > 0) {
                     var pctT = granTotal>0 ? (totalProd[p]/granTotal*100).toFixed(0) : 0;
-                    tc += '<td><span class="matriz-vol">' + fmt(totalProd[p]) + '</span> <span class="matriz-pct" style="background:#e2e8f0;color:#475569;">' + pctT + '%</span></td>';
+                    tc += '<td>' + fmt(totalProd[p]) + ' <span class="matriz-pct" style="opacity:0.7;">' + pctT + '%</span></td>';
                 } else {
                     tc += '<td>-</td>';
                 }
@@ -4491,83 +4489,7 @@ ${totalsRow}
             tc += '';
             trTot.innerHTML = tc;
             tbody.appendChild(trTot);
-
-            // Ajustar filas al alto de la grilla (sin scroll vertical)
-            requestAnimationFrame(fitMatrizToHeight);
         }
-
-        // Ajusta la matriz para que TODAS las filas entren en el alto real de la
-        // grilla, sin scroll vertical y ocupando todo el espacio. Escala fuente,
-        // padding e interlineado; si aún desborda (monitor chico) itera achicando
-        // hasta que entre. Usa !important porque el CSS de la celda lo tiene.
-        var _matrizFitRetry = 0;
-        function fitMatrizToHeight(){
-            var container = document.getElementById('execMatrizContainer');
-            if (!container || container.offsetParent === null) { _matrizFitRetry = 0; return; }
-            var thead = document.getElementById('matrizTableHead');
-            var tbody = document.getElementById('matrizTableBody');
-            if (!thead || !tbody) return;
-
-            var ch = container.clientHeight; // ya excluye la barra horizontal
-            if (ch <= 0) { if (_matrizFitRetry++ < 10) setTimeout(fitMatrizToHeight, 50); return; }
-            _matrizFitRetry = 0;
-
-            var totalRows = tbody.children.length + 1; // zonas + TOTAL + header
-            if (totalRows <= 1) return;
-
-            var rowH = ch / totalRows;
-            var vPad  = Math.max(1,   Math.min(rowH * 0.14, 10));
-            var fVol  = Math.max(8.5, Math.min(rowH * 0.42, 16));
-            var fHead = Math.max(8,   Math.min(rowH * 0.34, 12.5));
-            var fPct  = Math.max(7.5, Math.min(rowH * 0.30, 11.5));
-
-            var ths = thead.querySelectorAll('th');
-            var tds = tbody.querySelectorAll('td');
-            var vols = tbody.querySelectorAll('.matriz-vol, .matriz-destino');
-            var pcts = tbody.querySelectorAll('.matriz-pct');
-
-            function apply(){
-                ths.forEach(function(th){
-                    th.style.setProperty('padding-top', vPad + 'px', 'important');
-                    th.style.setProperty('padding-bottom', vPad + 'px', 'important');
-                    th.style.setProperty('font-size', fHead + 'px', 'important');
-                    th.style.setProperty('line-height', '1.1', 'important');
-                });
-                tds.forEach(function(td){
-                    td.style.setProperty('padding-top', vPad + 'px', 'important');
-                    td.style.setProperty('padding-bottom', vPad + 'px', 'important');
-                    td.style.setProperty('font-size', fVol + 'px', 'important');
-                    td.style.setProperty('line-height', '1.1', 'important');
-                });
-                vols.forEach(function(el){ el.style.setProperty('font-size', fVol + 'px', 'important'); });
-                pcts.forEach(function(el){
-                    el.style.setProperty('font-size', fPct + 'px', 'important');
-                    el.style.setProperty('padding', '1px 4px', 'important');
-                });
-            }
-            apply();
-
-            // Si todavía desborda el alto (pantalla chica), achicar hasta que entre.
-            var guard = 0;
-            while (container.scrollHeight > ch + 1 && guard < 14) {
-                vPad  = Math.max(0,   vPad  - 0.6);
-                fVol  = Math.max(7.5, fVol  - 0.6);
-                fHead = Math.max(7,   fHead - 0.5);
-                fPct  = Math.max(6.5, fPct  - 0.4);
-                apply();
-                guard++;
-                if (vPad === 0 && fVol === 7.5) break; // piso alcanzado
-            }
-        }
-
-        // Reajustar al cambiar el tamaño de la ventana (o de monitor)
-        var _matrizResizeT;
-        window.addEventListener('resize', function(){
-            clearTimeout(_matrizResizeT);
-            _matrizResizeT = setTimeout(function(){
-                if (EXEC_TAB === 'matriz') fitMatrizToHeight();
-            }, 120);
-        });
 
         function generateExecutionTable(context, target, d26, contextHist, lacksHistory, isClientOrProdFiltered = false, hideShareSio = false, passedDays = 1, totalDays = 1) {
             const tbody = document.getElementById('execTableBody');
