@@ -6650,6 +6650,63 @@ ${totalsRow}
         console.log('Días con operación: '+rows.filter(function(r){return r.volumen>0;}).length+' de '+allDates.length+' hábiles');
         console.log('Vol total: '+totVol.toLocaleString('de-DE')+' tn | Ops: '+totOps);
         console.log('Precio ponderado promedio: $'+totPrecPromARS.toLocaleString('de-DE')+' ARS/tn');
+
+        // --- EXCEL de verificación con detalle por operación + resumen diario ---
+        var xmlX = '<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
+        xmlX += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+        xmlX += '<Styles>';
+        xmlX += '<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#005C35" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>';
+        xmlX += '<Style ss:ID="num"><NumberFormat ss:Format="#,##0"/></Style>';
+        xmlX += '<Style ss:ID="dec"><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xmlX += '<Style ss:ID="def"><Font ss:FontName="Arial" ss:Size="10"/></Style>';
+        xmlX += '<Style ss:ID="tot"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
+        xmlX += '<Style ss:ID="totd"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xmlX += '</Styles>';
+        function escX(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function sCellX(v){ return '<Cell ss:StyleID="def"><Data ss:Type="String">'+escX(v)+'</Data></Cell>'; }
+        function nCellX(v,st){ return '<Cell ss:StyleID="'+(st||'num')+'"><Data ss:Type="Number">'+(v||0)+'</Data></Cell>'; }
+        function hCellX(v){ return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+escX(v)+'</Data></Cell>'; }
+
+        // Hoja 1: Operaciones crudas
+        xmlX += '<Worksheet ss:Name="Operaciones Crudas"><Table>';
+        xmlX += '<Row>'+['Fecha','Vendedor','Comprador','Vol Tn','Moneda (crudo)','Precio (crudo)','Precio parseado','Condicion','Tipo Negocio','Inicio Entrega','Fin Entrega','Observaciones','Destino'].map(hCellX).join('')+'</Row>';
+        ops.sort(function(a,b){
+            var fa=ymdFmt(a.dObj),fb=ymdFmt(b.dObj);
+            return fa<fb?-1:fa>fb?1:0;
+        });
+        ops.forEach(function(d){
+            var precioParseado = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            xmlX += '<Row>'+sCellX(ymdFmt(d.dObj))+sCellX(d.v||'')+sCellX(d.comprador||'')+nCellX(d.vol)+
+                sCellX(d.moneda||'')+sCellX(d.precio||'')+nCellX(precioParseado)+
+                sCellX(d.condicion||'')+sCellX(d.tipoNeg||'')+
+                sCellX(d.inicioEntrega||'')+sCellX(d.finEntrega||'')+
+                sCellX(d.observaciones||'')+sCellX(d.destino||'')+'</Row>';
+        });
+        xmlX += '</Table></Worksheet>';
+
+        // Hoja 2: Resumen diario (solo días con operación)
+        xmlX += '<Worksheet ss:Name="Resumen Diario"><Table>';
+        xmlX += '<Row>'+['Fecha','Vol Tn','Ops','Precio Pond ARS','Pizarra ARS','Delta ARS','Precio Pond USD','Pizarra USD','Delta USD','TC'].map(hCellX).join('')+'</Row>';
+        rows.forEach(function(r){
+            if (r.volumen>0){
+                xmlX += '<Row>'+sCellX(r.fecha)+nCellX(r.volumen)+nCellX(r.ops)+
+                    (r.precioARS?nCellX(r.precioARS):sCellX('-'))+
+                    (r.pizarraARS?nCellX(r.pizarraARS):sCellX('-'))+
+                    (r.deltaARS!==null?nCellX(r.deltaARS):sCellX('-'))+
+                    (r.precioUSD?nCellX(r.precioUSD,'dec'):sCellX('-'))+
+                    (r.pizarraUSD?nCellX(r.pizarraUSD,'dec'):sCellX('-'))+
+                    (r.deltaUSD!==null?nCellX(r.deltaUSD,'dec'):sCellX('-'))+
+                    (r.tc?nCellX(r.tc,'dec'):sCellX('-'))+'</Row>';
+            }
+        });
+        xmlX += '</Table></Worksheet>';
+
+        xmlX += '</Workbook>';
+        var blobX = new Blob([xmlX], {type:'application/vnd.ms-excel'});
+        var aX = document.createElement('a');
+        aX.href = URL.createObjectURL(blobX);
+        aX.download = 'Verificacion_Disponible_Diario_2026.xls';
+        aX.click();
     }
 
 
