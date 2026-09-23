@@ -6506,16 +6506,24 @@ ${totalsRow}
 
         if (!ops.length){ alert('No hay operaciones disponible a precio en el filtro'); return; }
 
-        // Agrupar por día — precio en ARS directamente
+        // Agrupar por día — si el precio es en USD, convertir a ARS con TC del día
         var diasMap = {};
         ops.forEach(function(d){
             var fecha = ymdFmt(d.dObj);
             if (!diasMap[fecha]) diasMap[fecha] = { vol:0, sumPxV_ars:0, ops:0 };
             var s = diasMap[fecha];
             var precio = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
-            s.vol += d.vol;
-            s.sumPxV_ars += precio * d.vol;
-            s.ops++;
+            var mon = (d.moneda||'').toUpperCase();
+            var precioARS = precio;
+            if (mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1){
+                var piz = pizarraDelDia(fecha);
+                precioARS = (piz && piz.tc>0) ? precio * piz.tc : 0;
+            }
+            if (precioARS > 0){
+                s.vol += d.vol;
+                s.sumPxV_ars += precioARS * d.vol;
+                s.ops++;
+            }
         });
 
         // Todos los días hábiles mar-ago
@@ -6669,15 +6677,22 @@ ${totalsRow}
 
         // Hoja 1: Operaciones crudas
         xmlX += '<Worksheet ss:Name="Operaciones Crudas"><Table>';
-        xmlX += '<Row>'+['Fecha','Vendedor','Comprador','Vol Tn','Moneda (crudo)','Precio (crudo)','Precio parseado','Condicion','Tipo Negocio','Inicio Entrega','Fin Entrega','Observaciones','Destino'].map(hCellX).join('')+'</Row>';
+        xmlX += '<Row>'+['Fecha','Vendedor','Comprador','Vol Tn','Moneda (crudo)','Precio (crudo)','Precio parseado','Precio ARS convert.','TC usado','Condicion','Tipo Negocio','Inicio Entrega','Fin Entrega','Observaciones','Destino'].map(hCellX).join('')+'</Row>';
         ops.sort(function(a,b){
             var fa=ymdFmt(a.dObj),fb=ymdFmt(b.dObj);
             return fa<fb?-1:fa>fb?1:0;
         });
         ops.forEach(function(d){
             var precioParseado = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            var mon = (d.moneda||'').toUpperCase();
+            var esUSD = (mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1);
+            var pizDia = pizarraDelDia(ymdFmt(d.dObj));
+            var tcUsado = (esUSD && pizDia) ? pizDia.tc : '';
+            var precioARS = esUSD ? (pizDia && pizDia.tc>0 ? precioParseado * pizDia.tc : 0) : precioParseado;
             xmlX += '<Row>'+sCellX(ymdFmt(d.dObj))+sCellX(d.v||'')+sCellX(d.comprador||'')+nCellX(d.vol)+
-                sCellX(d.moneda||'')+sCellX(d.precio||'')+nCellX(precioParseado)+
+                sCellX(d.moneda||'')+sCellX(d.precio||'')+nCellX(precioParseado,'dec')+
+                nCellX(Math.round(precioARS))+
+                (tcUsado?nCellX(tcUsado,'dec'):sCellX('-'))+
                 sCellX(d.condicion||'')+sCellX(d.tipoNeg||'')+
                 sCellX(d.inicioEntrega||'')+sCellX(d.finEntrega||'')+
                 sCellX(d.observaciones||'')+sCellX(d.destino||'')+'</Row>';
