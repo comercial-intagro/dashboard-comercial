@@ -1848,6 +1848,8 @@
                     if(r.c){
                         r.c.forEach((cell,i)=>{
                             rowObj[headers[i]]=cell?(cell.f!==undefined?cell.f:cell.v):"";
+                            // Columna AO (índice 40) = Observaciones (sin título en el Sheet)
+                            if(i===40) rowObj['__OBSERVACIONES']=cell?(cell.f!==undefined?cell.f:cell.v):"";
                         });
                     }
                     return rowObj;
@@ -2164,6 +2166,9 @@
             const colPrecio=findExact('PRECIO')||findKey('PRECIO')||'Precio';
             const colCondicion=findExact('CONDICION')||findKey('CONDICION')||'CONDICION';
             const colTipoNeg=findExact('TIPO DE NEGOCIO')||findKey('TIPO DE NEGOCIO')||findKey('TIPO NEGOCIO')||'TIPO DE NEGOCIO';
+            const colInicioEntrega=findExact('INICIO ENTREGA')||findKey('INICIO ENTREGA')||findKey('INICIO ENT')||'Inicio entrega';
+            const colFinEntrega=findExact('FECHA FIN ENTREGA')||findKey('FIN ENTREGA')||findKey('FIN ENT')||'Fecha fin entrega';
+            const colObservaciones='__OBSERVACIONES'; // columna AO del Sheet (sin título)
 
             let latestDate=new Date(2020,0,1);
             
@@ -2236,6 +2241,9 @@
                     precio:(row[colPrecio]||'').toString().trim(),
                     condicion:(row[colCondicion]||'').toString().trim(),
                     tipoNeg:(row[colTipoNeg]||'').toString().trim(),
+                    inicioEntrega:(row[colInicioEntrega]||'').toString().trim(),
+                    finEntrega:(row[colFinEntrega]||'').toString().trim(),
+                    observaciones:(row[colObservaciones]||'').toString().trim(),
                     argVend: esArgVendedor
                 });
                 return acc;
@@ -3762,12 +3770,14 @@ ${totalsRow}
             var base = (DB_FULL && DB_FULL.length) ? DB_FULL : DB;
             var fComp = document.getElementById('fComp') ? document.getElementById('fComp').value : 'all';
             var fProd = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
+            var fDest = document.getElementById('fDest') ? document.getElementById('fDest').value : 'all';
             var d26 = base.filter(function(d){
                 var cc = String(d.cuitComp||'').replace(/\D/g,'');
                 if (!cc || cc === ARGC) return false;
                 if (!(d.e && d.e.indexOf('26')!==-1)) return false;
                 if (fComp !== 'all' && cc !== fComp) return false;
                 if (fProd !== 'all' && d.cat !== fProd) return false;
+                if (fDest !== 'all' && zonaDeDestino(d.destino) !== fDest) return false;
                 if (CATEG_ACTIVA !== 'all' && (CATEG_COMPRADORES[cc]||'Otros') !== CATEG_ACTIVA) return false;
                 return true;
             });
@@ -5317,6 +5327,416 @@ ${totalsRow}
             // Limpiar tooltip al cerrar
             if (id === 'sioModal' && !show && typeof hideSioTooltip === 'function') hideSioTooltip();
         }
+
+    // ================================================================
+    // ANÁLISIS: Volumen vs Precio Pizarra Soja — Zona Rosario 2026
+    // Ejecutar desde F12: analizarSojaRosario()
+    // ================================================================
+    const PIZARRA_SOJA_2026 = [
+["2026-01-02",498000,1466.0,339.7],
+["2026-01-05",500000,1461.0,342.23],
+["2026-01-06",504830,1458.5,346.13],
+["2026-01-07",504900,1451.0,347.97],
+["2026-01-08",505000,1455.0,347.08],
+["2026-01-09",505000,1456.0,346.84],
+["2026-01-12",505000,1458.5,346.25],
+["2026-01-13",500000,1448.0,345.3],
+["2026-01-14",500000,1444.0,346.26],
+["2026-01-15",495000,1432.0,345.67],
+["2026-01-16",485000,1421.0,341.31],
+["2026-01-19",485000,1425.5,340.23],
+["2026-01-20",485500,1425.5,340.58],
+["2026-01-21",480500,1421.5,338.02],
+["2026-01-22",479900,1420.5,337.84],
+["2026-01-23",475000,1424.0,333.57],
+["2026-01-26",470000,1428.5,329.02],
+["2026-01-27",475000,1433.5,331.36],
+["2026-01-28",475000,1435.5,330.9],
+["2026-01-29",475000,1435.5,330.9],
+["2026-01-30",476000,1438.0,331.02],
+["2026-02-02",470000,1442.0,325.94],
+["2026-02-03",475000,1437.0,330.55],
+["2026-02-04",475000,1438.5,330.21],
+["2026-02-05",480000,1433.0,334.96],
+["2026-02-06",476500,1423.0,334.86],
+["2026-02-09",470000,1407.0,334.04],
+["2026-02-10",465000,1397.0,332.86],
+["2026-02-11",465000,1391.0,334.29],
+["2026-02-12",465000,1386.0,335.5],
+["2026-02-13",465000,1390.5,334.41],
+["2026-02-18",465000,1387.0,335.26],
+["2026-02-19",465000,1380.0,336.96],
+["2026-02-20",456000,1367.0,333.58],
+["2026-02-23",455000,1361.5,334.19],
+["2026-02-24",455000,1371.5,331.75],
+["2026-02-25",460000,1390.0,330.94],
+["2026-02-26",465000,1399.0,332.38],
+["2026-02-27",465000,1388.0,335.01],
+["2026-03-02",460000,1386.0,331.89],
+["2026-03-03",465000,1406.0,330.73],
+["2026-03-04",460000,1391.5,330.58],
+["2026-03-05",460000,1398.0,329.04],
+["2026-03-06",465000,1407.0,330.49],
+["2026-03-09",465000,1407.0,330.49],
+["2026-03-10",461500,1391.0,331.78],
+["2026-03-11",465000,1387.0,335.26],
+["2026-03-12",470000,1385.5,339.23],
+["2026-03-13",475000,1391.0,341.48],
+["2026-03-16",465000,1387.0,335.26],
+["2026-03-17",474500,1387.0,342.11],
+["2026-03-18",480000,1385.0,346.57],
+["2026-03-19",485000,1385.5,350.05],
+["2026-03-20",485000,1381.5,351.07],
+["2026-03-25",483000,1368.5,352.94],
+["2026-03-26",484000,1359.0,356.14],
+["2026-03-27",440000,1373.5,320.35],
+["2026-03-30",440000,1389.0,316.77],
+["2026-03-31",440000,1373.0,320.47],
+["2026-04-01",440000,1385.0,317.69],
+["2026-04-06",440000,1384.0,317.92],
+["2026-04-07",440000,1383.5,318.03],
+["2026-04-08",434000,1378.5,314.83],
+["2026-04-09",432000,1372.0,314.87],
+["2026-04-10",440000,1361.0,323.29],
+["2026-04-13",430000,1345.0,319.7],
+["2026-04-14",430500,1355.0,317.71],
+["2026-04-15",430000,1350.0,318.52],
+["2026-04-16",430000,1349.0,318.75],
+["2026-04-17",430000,1355.5,317.23],
+["2026-04-20",430000,1368.0,314.33],
+["2026-04-21",430000,1366.5,314.67],
+["2026-04-22",430000,1369.0,314.1],
+["2026-04-23",430000,1383.0,310.92],
+["2026-04-24",430000,1390.5,309.24],
+["2026-04-27",429000,1408.0,304.69],
+["2026-04-28",430000,1395.5,308.13],
+["2026-04-29",430000,1382.5,311.03],
+["2026-04-30",422000,1382.0,305.35],
+["2026-05-04",430000,1393.5,308.58],
+["2026-05-05",440000,1384.0,317.92],
+["2026-05-06",435000,1379.0,315.45],
+["2026-05-07",439800,1387.0,317.09],
+["2026-05-08",444000,1389.0,319.65],
+["2026-05-11",450000,1382.5,325.5],
+["2026-05-12",455000,1375.0,330.91],
+["2026-05-13",461000,1383.0,333.33],
+["2026-05-14",460000,1382.0,332.85],
+["2026-05-15",460200,1385.5,332.15],
+["2026-05-18",470000,1388.0,338.62],
+["2026-05-19",465000,1389.0,334.77],
+["2026-05-20",460000,1388.0,331.41],
+["2026-05-21",460000,1380.5,333.21],
+["2026-05-22",460000,1394.0,329.99],
+["2026-05-26",461000,1402.0,328.82],
+["2026-05-27",464000,1403.5,330.6],
+["2026-05-28",465000,1401.0,331.91],
+["2026-05-29",465000,1399.0,332.38],
+["2026-06-01",465000,1417.0,328.16],
+["2026-06-02",465000,1418.0,327.93],
+["2026-06-03",465000,1429.5,325.29],
+["2026-06-04",455000,1427.5,318.74],
+["2026-06-05",455000,1431.5,317.85],
+["2026-06-08",455000,1437.5,316.52],
+["2026-06-09",460000,1432.0,321.23],
+["2026-06-10",465000,1423.5,326.66],
+["2026-06-11",460000,1423.5,323.15],
+["2026-06-12",460000,1419.0,324.17],
+["2026-06-16",465000,1427.5,325.74],
+["2026-06-17",465000,1432.5,324.61],
+["2026-06-18",465000,1442.0,322.47],
+["2026-06-19",465000,1452.0,320.25],
+["2026-06-22",470000,1452.5,323.58],
+["2026-06-23",475000,1462.5,324.79],
+["2026-06-24",475000,1470.0,323.13],
+["2026-06-25",480000,1468.0,326.98],
+["2026-06-26",475000,1468.0,323.57],
+["2026-06-29",475000,1472.5,322.58],
+["2026-06-30",475000,1473.0,322.47],
+["2026-07-01",476000,1480.0,321.62],
+["2026-07-02",475400,1479.0,321.43],
+["2026-07-03",475600,1479.5,321.46],
+["2026-07-06",480500,1477.5,325.21],
+["2026-07-07",480500,1483.0,324.01],
+["2026-07-08",481000,1479.0,325.22],
+["2026-07-13",490000,1473.0,332.65],
+["2026-07-14",488000,1462.5,333.68],
+["2026-07-15",488000,1465.5,332.99],
+["2026-07-16",490000,1467.0,334.01],
+["2026-07-17",495000,1469.0,336.96],
+["2026-07-20",500000,1472.0,339.67],
+["2026-07-21",500000,1468.5,340.48],
+["2026-07-22",508500,1474.0,344.98],
+["2026-07-23",514500,1480.0,347.64],
+["2026-07-24",515000,1488.0,346.1],
+["2026-07-27",505000,1488.0,339.38],
+["2026-07-28",505500,1489.0,339.49],
+["2026-07-29",505000,1487.0,339.61],
+["2026-07-30",505000,1479.0,341.45],
+["2026-07-31",500000,1476.0,338.75],
+["2026-08-03",506000,1486.0,340.51],
+["2026-08-04",505000,1487.0,339.61],
+["2026-08-05",505000,1487.5,339.5],
+["2026-08-06",508000,1490.5,340.83],
+["2026-08-07",510000,1489.5,342.4],
+["2026-08-10",505000,1486.5,339.72],
+["2026-08-11",500000,1481.5,337.5],
+["2026-08-12",505500,1482.5,340.98],
+["2026-08-13",507000,1483.0,341.87],
+["2026-08-14",505500,1478.5,341.9],
+["2026-08-18",510000,1486.0,343.2],
+["2026-08-19",520000,1488.0,349.46],
+["2026-08-20",525000,1488.0,352.82],
+["2026-08-21",521500,1490.0,350.0],
+["2026-08-24",525000,1501.0,349.77],
+["2026-08-25",530000,1502.5,352.75],
+["2026-08-26",540000,1505.0,358.8],
+["2026-08-27",540000,1503.0,359.28],
+["2026-08-28",550000,1503.0,365.93],
+["2026-08-31",550000,1499.5,366.79]
+];
+
+    function analizarSojaRosario(){
+        if(!DB_FULL || !DB_FULL.length){ alert('Esperá a que cargue el dashboard'); return; }
+
+        // 1) Mapa de pizarra por fecha YYYY-MM-DD
+        var pizMap = {};
+        PIZARRA_SOJA_2026.forEach(function(p){
+            pizMap[p[0]] = { ars: p[1], tc: p[2], usd: p[3] };
+        });
+
+        // Helper: fecha pizarra más cercana (si un día no tiene, busca anterior)
+        function pizarraDelDia(ymd){
+            if (pizMap[ymd]) return pizMap[ymd];
+            var d = new Date(ymd + 'T12:00:00');
+            for (var i=1; i<=5; i++){
+                d.setDate(d.getDate()-1);
+                var k = d.toISOString().slice(0,10);
+                if (pizMap[k]) return pizMap[k];
+            }
+            return null;
+        }
+
+        // 2) Filtrar: Soja, Zona Rosario Total, ene-ago 2026
+        var base = DB_FULL;
+        var ops = base.filter(function(d){
+            if (d.cat !== 'SOJA') return false;
+            if (!d.dObj) return false;
+            var y = d.dObj.getFullYear(), m = d.dObj.getMonth()+1;
+            if (y !== 2026 || m < 3 || m > 8) return false;
+            if (zonaDeDestino(d.destino) !== 'ZONA ROSARIO TOTAL') return false;
+            return true;
+        });
+
+        if (!ops.length){ alert('No hay operaciones de soja en Zona Rosario ene-ago 2026'); return; }
+
+        // 3) Clasificar tipo de negocio
+        function tipoOp(d){
+            var p = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            if (!p || p <= 0) return 'A FIJAR';
+            var mon = (d.moneda||'').toUpperCase();
+            if (mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1) return 'PRECIO USD';
+            return 'PRECIO ARS';
+        }
+
+        function precioNumerico(d){
+            var p = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            return (p && p > 0) ? p : 0;
+        }
+
+        // 4) Enriquecer operaciones
+        var opsEnriq = ops.map(function(d){
+            var ymd = d.dObj.getFullYear()+'-'+('0'+(d.dObj.getMonth()+1)).slice(-2)+'-'+('0'+d.dObj.getDate()).slice(-2);
+            var piz = pizarraDelDia(ymd);
+            var tipo = tipoOp(d);
+            var precioOp = precioNumerico(d);
+            var precioOpUSD = 0;
+            if (tipo === 'PRECIO USD') precioOpUSD = precioOp;
+            else if (tipo === 'PRECIO ARS' && piz) precioOpUSD = precioOp / piz.tc;
+            return {
+                fecha: ymd,
+                vendedor: d.v||'',
+                comprador: d.comprador||'',
+                volumen: d.vol,
+                moneda: d.moneda||'',
+                precio: d.precio||'',
+                precioNum: precioOp,
+                precioUSD: Math.round(precioOpUSD*100)/100,
+                tipo: tipo,
+                condicion: d.condicion||'',
+                tipoNeg: d.tipoNeg||'',
+                inicioEntrega: d.inicioEntrega||'',
+                finEntrega: d.finEntrega||'',
+                observaciones: d.observaciones||'',
+                destino: d.destino||'',
+                pizARS: piz ? piz.ars : '',
+                pizTC: piz ? piz.tc : '',
+                pizUSD: piz ? piz.usd : '',
+                deltaUSD: (tipo !== 'A FIJAR' && precioOpUSD > 0 && piz) ? Math.round((precioOpUSD - piz.usd)*100)/100 : ''
+            };
+        });
+
+        // 5) Análisis semanal
+        var semanasMap = {};
+        opsEnriq.forEach(function(o){
+            var d = new Date(o.fecha+'T12:00:00');
+            var onejan = new Date(d.getFullYear(),0,1);
+            var wk = Math.ceil(((d - onejan)/86400000 + onejan.getDay()+1)/7);
+            var key = 'S'+('0'+wk).slice(-2);
+            if (!semanasMap[key]) semanasMap[key] = {
+                sem:key, fechaDesde:o.fecha, fechaHasta:o.fecha,
+                volTotal:0, volPrecio:0, volFijar:0,
+                sumPrecioXVol:0, pizSumUSD:0, pizCount:0, pizDias:{}
+            };
+            var s = semanasMap[key];
+            if (o.fecha < s.fechaDesde) s.fechaDesde = o.fecha;
+            if (o.fecha > s.fechaHasta) s.fechaHasta = o.fecha;
+            s.volTotal += o.volumen;
+            if (o.tipo !== 'A FIJAR'){ s.volPrecio += o.volumen; if(o.precioUSD>0) s.sumPrecioXVol += o.precioUSD * o.volumen; }
+            else s.volFijar += o.volumen;
+            if (o.pizUSD && !s.pizDias[o.fecha]){ s.pizDias[o.fecha]=o.pizUSD; s.pizSumUSD+=o.pizUSD; s.pizCount++; }
+        });
+        var semanas = Object.keys(semanasMap).sort().map(function(k){
+            var s = semanasMap[k];
+            return {
+                semana: s.sem,
+                desde: s.fechaDesde,
+                hasta: s.fechaHasta,
+                volTotal: s.volTotal,
+                volPrecio: s.volPrecio,
+                volFijar: s.volFijar,
+                pctPrecio: s.volTotal>0 ? Math.round(s.volPrecio/s.volTotal*1000)/10 : 0,
+                precioPromPond: s.volPrecio>0 ? Math.round(s.sumPrecioXVol/s.volPrecio*100)/100 : 0,
+                pizPromUSD: s.pizCount>0 ? Math.round(s.pizSumUSD/s.pizCount*100)/100 : 0
+            };
+        });
+
+        // 6) Análisis mensual
+        var mesesMap = {};
+        opsEnriq.forEach(function(o){
+            var m = o.fecha.slice(0,7); // YYYY-MM
+            if (!mesesMap[m]) mesesMap[m] = {
+                mes:m, volTotal:0, volPrecioUSD:0, volPrecioARS:0, volFijar:0,
+                sumPxV:0, pizSum:0, pizN:0, pizDias:{}, opsCount:0
+            };
+            var s = mesesMap[m];
+            s.volTotal += o.volumen;
+            s.opsCount++;
+            if (o.tipo === 'A FIJAR') s.volFijar += o.volumen;
+            else if (o.tipo === 'PRECIO USD'){ s.volPrecioUSD += o.volumen; if(o.precioUSD>0) s.sumPxV += o.precioUSD*o.volumen; }
+            else { s.volPrecioARS += o.volumen; if(o.precioUSD>0) s.sumPxV += o.precioUSD*o.volumen; }
+            if (o.pizUSD && !s.pizDias[o.fecha]){ s.pizDias[o.fecha]=o.pizUSD; s.pizSum+=o.pizUSD; s.pizN++; }
+        });
+        var meses = Object.keys(mesesMap).sort().map(function(k){
+            var s = mesesMap[k];
+            var volConPrecio = s.volPrecioUSD + s.volPrecioARS;
+            return {
+                mes: s.mes,
+                ops: s.opsCount,
+                volTotal: s.volTotal,
+                volPrecioUSD: s.volPrecioUSD,
+                volPrecioARS: s.volPrecioARS,
+                volFijar: s.volFijar,
+                pctFijar: s.volTotal>0 ? Math.round(s.volFijar/s.volTotal*1000)/10 : 0,
+                precioPromUSD: volConPrecio>0 ? Math.round(s.sumPxV/volConPrecio*100)/100 : 0,
+                pizPromUSD: s.pizN>0 ? Math.round(s.pizSum/s.pizN*100)/100 : 0
+            };
+        });
+
+        // 7) Generar Excel (SpreadsheetML XML)
+        var xml = '<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
+        xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+        xml += '<Styles>';
+        xml += '<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#005C35" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>';
+        xml += '<Style ss:ID="num"><NumberFormat ss:Format="#,##0"/></Style>';
+        xml += '<Style ss:ID="dec"><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xml += '<Style ss:ID="pct"><NumberFormat ss:Format="0.0%"/></Style>';
+        xml += '<Style ss:ID="dt"><NumberFormat ss:Format="yyyy-mm-dd"/></Style>';
+        xml += '<Style ss:ID="tot"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
+        xml += '<Style ss:ID="totd"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xml += '<Style ss:ID="totp"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="0.0%"/></Style>';
+        xml += '<Style ss:ID="def"><Font ss:FontName="Arial" ss:Size="10"/></Style>';
+        xml += '</Styles>';
+
+        function esc(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function sCell(v){ return '<Cell ss:StyleID="def"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
+        function nCell(v,st){ return '<Cell ss:StyleID="'+(st||'num')+'"><Data ss:Type="Number">'+(v||0)+'</Data></Cell>'; }
+        function hCell(v){ return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
+
+        // --- Hoja 1: Resumen Mensual ---
+        xml += '<Worksheet ss:Name="Resumen Mensual"><Table>';
+        var mhdr = ['Mes','Ops','Vol Total','Vol Precio USD','Vol Precio ARS','Vol a Fijar','% a Fijar','Precio Prom USD','Pizarra Prom USD','Delta USD'];
+        xml += '<Row>' + mhdr.map(hCell).join('') + '</Row>';
+        var totM = {ops:0,vt:0,vpU:0,vpA:0,vf:0,spxv:0};
+        meses.forEach(function(m){
+            totM.ops+=m.ops; totM.vt+=m.volTotal; totM.vpU+=m.volPrecioUSD; totM.vpA+=m.volPrecioARS; totM.vf+=m.volFijar;
+            if(m.precioPromUSD>0) totM.spxv += m.precioPromUSD*(m.volPrecioUSD+m.volPrecioARS);
+            var delta = (m.precioPromUSD>0 && m.pizPromUSD>0) ? Math.round((m.precioPromUSD - m.pizPromUSD)*100)/100 : '';
+            xml += '<Row>'+sCell(m.mes)+nCell(m.ops)+nCell(m.volTotal)+nCell(m.volPrecioUSD)+nCell(m.volPrecioARS)+nCell(m.volFijar)+
+                nCell(m.pctFijar/100,'pct')+nCell(m.precioPromUSD,'dec')+nCell(m.pizPromUSD,'dec')+
+                (delta!=='' ? nCell(delta,'dec') : sCell('-'))+'</Row>';
+        });
+        var totPPP = (totM.vpU+totM.vpA)>0 ? Math.round(totM.spxv/(totM.vpU+totM.vpA)*100)/100 : 0;
+        xml += '<Row>'+
+            '<Cell ss:StyleID="tot"><Data ss:Type="String">TOTAL</Data></Cell>'+
+            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.ops+'</Data></Cell>'+
+            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vt+'</Data></Cell>'+
+            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vpU+'</Data></Cell>'+
+            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vpA+'</Data></Cell>'+
+            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vf+'</Data></Cell>'+
+            '<Cell ss:StyleID="totp"><Data ss:Type="Number">'+(totM.vt>0?totM.vf/totM.vt:0)+'</Data></Cell>'+
+            '<Cell ss:StyleID="totd"><Data ss:Type="Number">'+totPPP+'</Data></Cell>'+
+            sCell('')+sCell('')+'</Row>';
+        xml += '</Table></Worksheet>';
+
+        // --- Hoja 2: Análisis Semanal ---
+        xml += '<Worksheet ss:Name="Analisis Semanal"><Table>';
+        var shdr = ['Semana','Desde','Hasta','Vol Total','Vol con Precio','Vol a Fijar','% con Precio','Precio Prom Pond USD','Pizarra Prom USD','Delta USD'];
+        xml += '<Row>' + shdr.map(hCell).join('') + '</Row>';
+        semanas.forEach(function(s){
+            var delta = (s.precioPromPond>0 && s.pizPromUSD>0) ? Math.round((s.precioPromPond - s.pizPromUSD)*100)/100 : '';
+            xml += '<Row>'+sCell(s.semana)+sCell(s.desde)+sCell(s.hasta)+nCell(s.volTotal)+nCell(s.volPrecio)+nCell(s.volFijar)+
+                nCell(s.pctPrecio/100,'pct')+nCell(s.precioPromPond,'dec')+nCell(s.pizPromUSD,'dec')+
+                (delta!=='' ? nCell(delta,'dec') : sCell('-'))+'</Row>';
+        });
+        xml += '</Table></Worksheet>';
+
+        // --- Hoja 3: Pizarra Diaria ---
+        xml += '<Worksheet ss:Name="Pizarra Diaria"><Table>';
+        xml += '<Row>'+['Fecha','Precio Soja ARS','Tipo Cambio','Precio Soja USD'].map(hCell).join('')+'</Row>';
+        PIZARRA_SOJA_2026.forEach(function(p){
+            xml += '<Row>'+sCell(p[0])+nCell(p[1])+nCell(p[2],'dec')+nCell(p[3],'dec')+'</Row>';
+        });
+        xml += '</Table></Worksheet>';
+
+        // --- Hoja 4: Operaciones detalle ---
+        xml += '<Worksheet ss:Name="Operaciones"><Table>';
+        var ohdr = ['Fecha','Vendedor','Comprador','Volumen Tn','Moneda','Precio','Tipo','Precio Op USD','Condicion','Tipo Negocio',
+            'Inicio Entrega','Fin Entrega','Observaciones','Destino','Pizarra ARS','TC','Pizarra USD','Delta vs Pizarra USD'];
+        xml += '<Row>' + ohdr.map(hCell).join('') + '</Row>';
+        opsEnriq.sort(function(a,b){ return a.fecha<b.fecha?-1:a.fecha>b.fecha?1:0; });
+        opsEnriq.forEach(function(o){
+            xml += '<Row>'+sCell(o.fecha)+sCell(o.vendedor)+sCell(o.comprador)+nCell(o.volumen)+sCell(o.moneda)+sCell(o.precio)+
+                sCell(o.tipo)+(o.precioUSD>0?nCell(o.precioUSD,'dec'):sCell('-'))+sCell(o.condicion)+sCell(o.tipoNeg)+
+                sCell(o.inicioEntrega)+sCell(o.finEntrega)+sCell(o.observaciones)+sCell(o.destino)+
+                (o.pizARS?nCell(o.pizARS):sCell('-'))+(o.pizTC?nCell(o.pizTC,'dec'):sCell('-'))+(o.pizUSD?nCell(o.pizUSD,'dec'):sCell('-'))+
+                (o.deltaUSD!==''?nCell(o.deltaUSD,'dec'):sCell('-'))+'</Row>';
+        });
+        xml += '</Table></Worksheet>';
+
+        xml += '</Workbook>';
+
+        // 8) Descargar
+        var blob = new Blob([xml], {type:'application/vnd.ms-excel'});
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Analisis_Soja_Rosario_2026.xls';
+        a.click();
+
+        console.log('Análisis generado: '+opsEnriq.length+' operaciones, '+meses.length+' meses, '+semanas.length+' semanas');
+        console.log('Resumen rápido:');
+        meses.forEach(function(m){ console.log(m.mes+': '+m.volTotal+' tn ('+m.pctFijar+'% a fijar) | Pizarra prom: '+m.pizPromUSD+' USD'); });
+    }
+
     </script>
 </body>
 </html>
