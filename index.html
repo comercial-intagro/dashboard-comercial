@@ -5495,247 +5495,974 @@ ${totalsRow}
 ["2026-08-31",550000,1499.5,366.79]
 ];
 
+    // Cotizaciones A3 MATba-ROFEX Soja Rosario — [fecha, posición, precioAjusteUSD]
+    const A3_SOJA_2026 = [
+["2026-03-02","ABR26",321.0],
+["2026-03-02","MAY26",326.1],
+["2026-03-02","JUL26",335.1],
+["2026-03-02","SEP26",342.0],
+["2026-03-02","NOV26",348.0],
+["2026-03-02","MAY27",337.3],
+["2026-03-03","ABR26",322.0],
+["2026-03-03","MAY26",326.0],
+["2026-03-03","JUL26",335.5],
+["2026-03-03","SEP26",342.5],
+["2026-03-03","NOV26",349.9],
+["2026-03-03","MAY27",340.2],
+["2026-03-04","ABR26",320.0],
+["2026-03-04","MAY26",325.5],
+["2026-03-04","JUL26",334.3],
+["2026-03-04","SEP26",341.8],
+["2026-03-04","NOV26",348.1],
+["2026-03-04","MAY27",340.8],
+["2026-03-05","ABR26",318.0],
+["2026-03-05","MAY26",322.5],
+["2026-03-05","JUL26",331.6],
+["2026-03-05","SEP26",339.3],
+["2026-03-05","NOV26",346.5],
+["2026-03-05","MAY27",341.5],
+["2026-03-06","ABR26",319.5],
+["2026-03-06","MAY26",324.5],
+["2026-03-06","JUL26",334.0],
+["2026-03-06","NOV26",348.0],
+["2026-03-06","MAY27",341.5],
+["2026-03-09","ABR26",317.4],
+["2026-03-09","MAY26",321.5],
+["2026-03-09","JUL26",331.5],
+["2026-03-09","NOV26",345.0],
+["2026-03-09","MAY27",337.0],
+["2026-03-10","MAR26",320.0],
+["2026-03-10","MAY26",321.5],
+["2026-03-10","JUL26",331.5],
+["2026-03-10","NOV26",345.0],
+["2026-03-10","MAY27",336.5],
+["2026-03-11","MAY26",322.7],
+["2026-03-11","JUL26",333.8],
+["2026-03-11","SEP26",340.8],
+["2026-03-11","NOV26",347.3],
+["2026-03-11","MAY27",337.5],
+["2026-03-12","ABR26",325.0],
+["2026-03-12","MAY26",329.0],
+["2026-03-12","JUL26",340.2],
+["2026-03-12","SEP26",345.5],
+["2026-03-12","NOV26",352.8],
+["2026-03-12","MAY27",340.5],
+["2026-03-13","ABR26",324.0],
+["2026-03-13","MAY26",327.4],
+["2026-03-13","JUL26",338.8],
+["2026-03-13","SEP26",345.0],
+["2026-03-13","NOV26",351.2],
+["2026-03-13","MAY27",340.0],
+["2026-03-16","MAY26",320.5],
+["2026-03-16","JUL26",331.7],
+["2026-03-16","SEP26",338.5],
+["2026-03-16","NOV26",343.7],
+["2026-03-16","MAY27",334.5],
+["2026-03-17","MAR26",327.5],
+["2026-03-17","ABR26",320.0],
+["2026-03-17","MAY26",323.5],
+["2026-03-17","JUL26",333.9],
+["2026-03-17","SEP26",339.5],
+["2026-03-17","NOV26",345.7],
+["2026-03-17","MAY27",336.0],
+["2026-03-18","ABR26",323.0],
+["2026-03-18","MAY26",327.5],
+["2026-03-18","JUL26",337.8],
+["2026-03-18","SEP26",343.0],
+["2026-03-18","NOV26",349.0],
+["2026-03-18","MAY27",339.0],
+["2026-03-19","ABR26",326.1],
+["2026-03-19","MAY26",331.7],
+["2026-03-19","JUL26",342.5],
+["2026-03-19","SEP26",347.5],
+["2026-03-19","NOV26",352.0],
+["2026-03-19","MAY27",341.0],
+["2026-03-20","ABR26",326.0],
+["2026-03-20","MAY26",329.5],
+["2026-03-20","JUL26",339.8],
+["2026-03-20","SEP26",344.5],
+["2026-03-20","NOV26",350.2],
+["2026-03-20","MAY27",339.9],
+["2026-03-25","ABR26",325.0],
+["2026-03-25","MAY26",327.2],
+["2026-03-25","JUL26",337.8],
+["2026-03-25","SEP26",342.3],
+["2026-03-25","NOV26",348.0],
+["2026-03-25","MAY27",338.0],
+["2026-03-26","ABR26",325.0],
+["2026-03-26","MAY26",328.0],
+["2026-03-26","JUL26",338.2],
+["2026-03-26","SEP26",342.5],
+["2026-03-26","NOV26",348.1],
+["2026-03-26","MAY27",337.8],
+["2026-03-27","ABR26",321.0],
+["2026-03-27","MAY26",326.6],
+["2026-03-27","JUL26",337.0],
+["2026-03-27","SEP26",341.1],
+["2026-03-27","NOV26",346.0],
+["2026-03-27","MAY27",335.0],
+["2026-03-30","ABR26",321.0],
+["2026-03-30","MAY26",326.0],
+["2026-03-30","JUL26",336.5],
+["2026-03-30","SEP26",340.8],
+["2026-03-30","NOV26",345.5],
+["2026-03-30","MAY27",335.5],
+["2026-03-31","ABR26",320.0],
+["2026-03-31","MAY26",325.1],
+["2026-03-31","JUL26",335.5],
+["2026-03-31","SEP26",340.5],
+["2026-03-31","NOV26",345.5],
+["2026-03-31","MAY27",336.5],
+["2026-04-01","ABR26",318.0],
+["2026-04-01","MAY26",323.0],
+["2026-04-01","JUL26",333.0],
+["2026-04-01","SEP26",337.6],
+["2026-04-01","NOV26",342.4],
+["2026-04-01","MAY27",334.3],
+["2026-04-06","ABR26",318.0],
+["2026-04-06","MAY26",324.2],
+["2026-04-06","JUL26",333.7],
+["2026-04-06","SEP26",338.0],
+["2026-04-06","NOV26",342.8],
+["2026-04-06","MAY27",335.0],
+["2026-04-07","MAY26",323.9],
+["2026-04-07","JUL26",333.0],
+["2026-04-07","SEP26",337.2],
+["2026-04-07","NOV26",342.0],
+["2026-04-07","MAY27",333.0],
+["2026-04-08","ABR26",316.0],
+["2026-04-08","MAY26",323.6],
+["2026-04-08","JUL26",332.1],
+["2026-04-08","NOV26",341.1],
+["2026-04-08","MAY27",330.9],
+["2026-04-09","MAY26",324.3],
+["2026-04-09","JUL26",332.5],
+["2026-04-09","SEP26",337.0],
+["2026-04-09","NOV26",342.0],
+["2026-04-09","MAY27",332.0],
+["2026-04-10","ABR26",322.4],
+["2026-04-10","MAY26",324.6],
+["2026-04-10","JUL26",333.2],
+["2026-04-10","SEP26",337.7],
+["2026-04-10","NOV26",342.0],
+["2026-04-10","MAY27",332.5],
+["2026-04-13","MAY26",323.0],
+["2026-04-13","JUL26",331.0],
+["2026-04-13","SEP26",336.2],
+["2026-04-13","NOV26",339.5],
+["2026-04-13","MAY27",331.0],
+["2026-04-14","ABR26",319.0],
+["2026-04-14","MAY26",321.5],
+["2026-04-14","JUL26",330.5],
+["2026-04-14","SEP26",335.0],
+["2026-04-14","NOV26",338.5],
+["2026-04-14","MAY27",330.5],
+["2026-04-15","MAY26",321.0],
+["2026-04-15","JUL26",329.8],
+["2026-04-15","SEP26",335.0],
+["2026-04-15","NOV26",338.9],
+["2026-04-15","MAY27",332.2],
+["2026-04-16","MAY26",321.3],
+["2026-04-16","JUL26",330.3],
+["2026-04-16","SEP26",334.6],
+["2026-04-16","NOV26",339.2],
+["2026-04-16","MAY27",331.3],
+["2026-04-17","ABR26",318.0],
+["2026-04-17","MAY26",319.5],
+["2026-04-17","JUL26",328.5],
+["2026-04-17","SEP26",332.6],
+["2026-04-17","NOV26",338.0],
+["2026-04-17","MAY27",331.0],
+["2026-04-20","MAY26",318.8],
+["2026-04-20","JUL26",328.0],
+["2026-04-20","NOV26",337.9],
+["2026-04-20","MAY27",331.5],
+["2026-04-21","ABR26",319.5],
+["2026-04-21","MAY26",319.9],
+["2026-04-21","JUL26",329.5],
+["2026-04-21","SEP26",334.2],
+["2026-04-21","NOV26",338.9],
+["2026-04-21","MAY27",331.0],
+["2026-04-22","ABR26",318.0],
+["2026-04-22","MAY26",318.8],
+["2026-04-22","JUL26",328.7],
+["2026-04-22","SEP26",333.5],
+["2026-04-22","NOV26",338.5],
+["2026-04-22","MAY27",331.5],
+["2026-04-23","ABR26",317.6],
+["2026-04-23","MAY26",318.9],
+["2026-04-23","JUL26",328.5],
+["2026-04-23","SEP26",333.0],
+["2026-04-23","NOV26",338.6],
+["2026-04-23","MAY27",332.0],
+["2026-04-24","MAY26",315.3],
+["2026-04-24","JUL26",325.0],
+["2026-04-24","SEP26",329.2],
+["2026-04-24","NOV26",335.2],
+["2026-04-24","MAY27",328.9],
+["2026-04-27","MAY26",315.3],
+["2026-04-27","JUL26",326.3],
+["2026-04-27","NOV26",336.2],
+["2026-04-27","MAY27",328.5],
+["2026-04-28","MAY26",317.2],
+["2026-04-28","JUL26",329.4],
+["2026-04-28","SEP26",333.0],
+["2026-04-28","NOV26",338.7],
+["2026-04-28","MAY27",330.0],
+["2026-04-29","MAY26",317.0],
+["2026-04-29","JUL26",330.4],
+["2026-04-29","SEP26",334.5],
+["2026-04-29","NOV26",339.5],
+["2026-04-29","MAY27",331.0],
+["2026-04-30","MAY26",316.9],
+["2026-04-30","JUL26",329.3],
+["2026-04-30","SEP26",333.6],
+["2026-04-30","NOV26",339.0],
+["2026-04-30","MAY27",331.0],
+["2026-05-04","MAY26",320.7],
+["2026-05-04","JUL26",331.8],
+["2026-05-04","SEP26",337.5],
+["2026-05-04","NOV26",342.5],
+["2026-05-04","MAY27",335.5],
+["2026-05-05","MAY26",322.8],
+["2026-05-05","JUL26",332.5],
+["2026-05-05","SEP26",337.5],
+["2026-05-05","NOV26",342.6],
+["2026-05-05","MAY27",335.5],
+["2026-05-06","MAY26",319.2],
+["2026-05-06","JUL26",330.0],
+["2026-05-06","SEP26",335.1],
+["2026-05-06","NOV26",339.0],
+["2026-05-06","MAY27",331.5],
+["2026-05-07","MAY26",320.0],
+["2026-05-07","JUL26",330.3],
+["2026-05-07","SEP26",335.0],
+["2026-05-07","NOV26",338.5],
+["2026-05-07","MAY27",331.5],
+["2026-05-08","MAY26",323.6],
+["2026-05-08","JUL26",331.3],
+["2026-05-08","SEP26",336.4],
+["2026-05-08","NOV26",340.3],
+["2026-05-08","MAY27",332.0],
+["2026-05-11","MAY26",328.2],
+["2026-05-11","JUL26",335.1],
+["2026-05-11","SEP26",340.5],
+["2026-05-11","NOV26",344.0],
+["2026-05-11","MAY27",335.0],
+["2026-05-12","MAY26",333.3],
+["2026-05-12","JUL26",338.7],
+["2026-05-12","SEP26",344.2],
+["2026-05-12","NOV26",347.5],
+["2026-05-12","MAY27",338.0],
+["2026-05-13","MAY26",339.2],
+["2026-05-13","JUL26",345.3],
+["2026-05-13","SEP26",350.0],
+["2026-05-13","NOV26",354.0],
+["2026-05-13","MAY27",342.5],
+["2026-05-14","MAY26",336.2],
+["2026-05-14","JUL26",343.0],
+["2026-05-14","SEP26",347.7],
+["2026-05-14","NOV26",351.2],
+["2026-05-14","MAY27",342.0],
+["2026-05-15","MAY26",339.0],
+["2026-05-15","JUL26",344.2],
+["2026-05-15","SEP26",348.0],
+["2026-05-15","NOV26",352.0],
+["2026-05-15","MAY27",342.5],
+["2026-05-18","MAY26",339.6],
+["2026-05-18","JUL26",344.1],
+["2026-05-18","SEP26",348.5],
+["2026-05-18","NOV26",352.5],
+["2026-05-18","MAY27",342.0],
+["2026-05-19","MAY26",338.0],
+["2026-05-19","JUL26",343.1],
+["2026-05-19","SEP26",346.8],
+["2026-05-19","NOV26",351.2],
+["2026-05-19","MAY27",341.9],
+["2026-05-20","MAY26",335.5],
+["2026-05-20","JUL26",340.5],
+["2026-05-20","SEP26",344.5],
+["2026-05-20","NOV26",348.3],
+["2026-05-20","MAY27",340.8],
+["2026-05-21","MAY26",335.5],
+["2026-05-21","JUL26",340.2],
+["2026-05-21","SEP26",344.0],
+["2026-05-21","NOV26",348.0],
+["2026-05-21","MAY27",339.9],
+["2026-05-21","JUL27",345.0],
+["2026-05-22","JUL26",340.1],
+["2026-05-22","SEP26",343.1],
+["2026-05-22","NOV26",348.0],
+["2026-05-22","MAY27",342.8],
+["2026-05-22","JUL27",350.6],
+["2026-05-26","JUL26",335.0],
+["2026-05-26","SEP26",337.7],
+["2026-05-26","NOV26",343.0],
+["2026-05-26","MAY27",336.0],
+["2026-05-27","JUL26",335.0],
+["2026-05-27","SEP26",337.5],
+["2026-05-27","NOV26",342.4],
+["2026-05-27","MAY27",335.5],
+["2026-05-27","JUL27",343.5],
+["2026-05-28","JUN26",335.0],
+["2026-05-28","JUL26",337.5],
+["2026-05-28","SEP26",340.0],
+["2026-05-28","NOV26",345.0],
+["2026-05-28","MAY27",337.1],
+["2026-05-28","JUL27",344.3],
+["2026-05-29","JUL26",334.8],
+["2026-05-29","SEP26",337.0],
+["2026-05-29","NOV26",342.5],
+["2026-05-29","MAY27",334.5],
+["2026-05-29","JUL27",343.5],
+["2026-06-01","JUL26",331.6],
+["2026-06-01","NOV26",339.1],
+["2026-06-01","MAY27",331.5],
+["2026-06-01","JUL27",340.9],
+["2026-06-02","JUL26",331.2],
+["2026-06-02","SEP26",333.7],
+["2026-06-02","NOV26",339.3],
+["2026-06-02","MAY27",331.8],
+["2026-06-02","JUL27",339.2],
+["2026-06-03","JUL26",329.0],
+["2026-06-03","SEP26",331.3],
+["2026-06-03","NOV26",338.0],
+["2026-06-03","MAY27",331.0],
+["2026-06-04","JUL26",324.5],
+["2026-06-04","SEP26",327.5],
+["2026-06-04","NOV26",334.0],
+["2026-06-04","MAY27",327.0],
+["2026-06-05","JUL26",322.1],
+["2026-06-05","SEP26",325.4],
+["2026-06-05","NOV26",332.0],
+["2026-06-05","MAY27",325.5],
+["2026-06-08","JUL26",323.6],
+["2026-06-08","SEP26",327.4],
+["2026-06-08","NOV26",333.5],
+["2026-06-08","MAY27",327.0],
+["2026-06-09","JUL26",326.5],
+["2026-06-09","SEP26",329.7],
+["2026-06-09","NOV26",335.7],
+["2026-06-09","MAY27",328.5],
+["2026-06-10","JUL26",329.5],
+["2026-06-10","SEP26",333.0],
+["2026-06-10","NOV26",338.4],
+["2026-06-10","MAY27",330.5],
+["2026-06-10","JUL27",336.7],
+["2026-06-11","JUL26",326.5],
+["2026-06-11","NOV26",335.6],
+["2026-06-11","MAY27",328.7],
+["2026-06-12","JUL26",327.5],
+["2026-06-12","NOV26",336.3],
+["2026-06-12","MAY27",328.0],
+["2026-06-16","JUL26",327.5],
+["2026-06-16","SEP26",331.5],
+["2026-06-16","NOV26",336.0],
+["2026-06-16","MAY27",328.0],
+["2026-06-17","JUL26",327.4],
+["2026-06-17","SEP26",331.0],
+["2026-06-17","NOV26",335.7],
+["2026-06-17","MAY27",328.0],
+["2026-06-18","JUL26",326.1],
+["2026-06-18","SEP26",331.0],
+["2026-06-18","NOV26",335.5],
+["2026-06-18","MAY27",327.5],
+["2026-06-19","JUL26",325.2],
+["2026-06-19","SEP26",331.0],
+["2026-06-19","NOV26",335.2],
+["2026-06-19","MAY27",327.1],
+["2026-06-22","JUL26",327.0],
+["2026-06-22","SEP26",331.5],
+["2026-06-22","NOV26",336.9],
+["2026-06-22","MAY27",328.0],
+["2026-06-23","JUL26",327.4],
+["2026-06-23","SEP26",332.5],
+["2026-06-23","NOV26",337.0],
+["2026-06-23","MAY27",328.7],
+["2026-06-24","JUL26",326.8],
+["2026-06-24","SEP26",331.5],
+["2026-06-24","NOV26",335.0],
+["2026-06-24","MAY27",326.1],
+["2026-06-24","JUL27",333.8],
+["2026-06-25","JUL26",329.2],
+["2026-06-25","SEP26",333.5],
+["2026-06-25","NOV26",337.5],
+["2026-06-25","MAY27",329.0],
+["2026-06-25","JUL27",335.5],
+["2026-06-26","JUL26",327.6],
+["2026-06-26","SEP26",331.8],
+["2026-06-26","NOV26",335.6],
+["2026-06-26","MAY27",327.9],
+["2026-06-26","JUL27",335.0],
+["2026-06-29","JUL26",325.8],
+["2026-06-29","SEP26",330.0],
+["2026-06-29","NOV26",333.7],
+["2026-06-29","MAY27",326.0],
+["2026-06-29","JUL27",332.8],
+["2026-06-30","JUL26",324.6],
+["2026-06-30","SEP26",329.5],
+["2026-06-30","NOV26",333.1],
+["2026-06-30","MAY27",325.5],
+["2026-06-30","JUL27",332.0],
+["2026-07-01","JUL26",323.5],
+["2026-07-01","SEP26",329.0],
+["2026-07-01","NOV26",332.5],
+["2026-07-01","MAY27",325.4],
+["2026-07-01","JUL27",332.0],
+["2026-07-02","JUL26",323.1],
+["2026-07-02","SEP26",328.0],
+["2026-07-02","NOV26",331.6],
+["2026-07-02","MAY27",324.6],
+["2026-07-02","JUL27",331.5],
+["2026-07-03","JUL26",322.4],
+["2026-07-03","NOV26",331.7],
+["2026-07-03","MAY27",324.6],
+["2026-07-03","JUL27",331.3],
+["2026-07-06","JUL26",328.0],
+["2026-07-06","SEP26",332.5],
+["2026-07-06","NOV26",337.8],
+["2026-07-06","MAY27",330.5],
+["2026-07-06","JUL27",336.0],
+["2026-07-07","JUL26",327.7],
+["2026-07-07","SEP26",332.5],
+["2026-07-07","NOV26",339.0],
+["2026-07-07","MAY27",331.5],
+["2026-07-07","JUL27",337.5],
+["2026-07-08","JUL26",328.5],
+["2026-07-08","SEP26",334.5],
+["2026-07-08","NOV26",340.0],
+["2026-07-08","MAY27",332.5],
+["2026-07-08","JUL27",338.7],
+["2026-07-13","JUL26",333.2],
+["2026-07-13","SEP26",338.3],
+["2026-07-13","NOV26",344.5],
+["2026-07-13","MAY27",335.5],
+["2026-07-13","JUL27",341.0],
+["2026-07-14","JUL26",335.5],
+["2026-07-14","SEP26",340.0],
+["2026-07-14","NOV26",346.1],
+["2026-07-14","MAY27",336.7],
+["2026-07-14","JUL27",342.0],
+["2026-07-15","JUL26",335.0],
+["2026-07-15","SEP26",339.5],
+["2026-07-15","NOV26",346.0],
+["2026-07-15","MAY27",336.0],
+["2026-07-15","JUL27",341.5],
+["2026-07-16","JUL26",336.3],
+["2026-07-16","SEP26",341.0],
+["2026-07-16","NOV26",346.6],
+["2026-07-16","MAY27",335.5],
+["2026-07-16","JUL27",341.5],
+["2026-07-17","JUL26",337.9],
+["2026-07-17","SEP26",341.5],
+["2026-07-17","NOV26",347.8],
+["2026-07-17","MAY27",337.0],
+["2026-07-17","JUL27",343.0],
+["2026-07-20","JUL26",339.0],
+["2026-07-20","SEP26",343.5],
+["2026-07-20","NOV26",349.3],
+["2026-07-20","MAY27",337.8],
+["2026-07-20","JUL27",344.0],
+["2026-07-21","JUL26",339.9],
+["2026-07-21","SEP26",344.6],
+["2026-07-21","NOV26",349.8],
+["2026-07-21","MAY27",338.8],
+["2026-07-21","JUL27",344.5],
+["2026-07-22","JUL26",345.8],
+["2026-07-22","SEP26",349.2],
+["2026-07-22","NOV26",353.5],
+["2026-07-22","MAY27",341.0],
+["2026-07-22","JUL27",347.0],
+["2026-07-23","JUL26",346.5],
+["2026-07-23","SEP26",350.4],
+["2026-07-23","NOV26",354.6],
+["2026-07-23","MAY27",341.2],
+["2026-07-23","JUL27",347.9],
+["2026-07-24","JUL26",348.0],
+["2026-07-24","AGO26",348.0],
+["2026-07-24","SEP26",351.0],
+["2026-07-24","NOV26",355.0],
+["2026-07-24","MAY27",343.2],
+["2026-07-24","JUL27",348.9],
+["2026-07-27","AGO26",342.0],
+["2026-07-27","SEP26",345.0],
+["2026-07-27","NOV26",348.5],
+["2026-07-27","MAY27",338.5],
+["2026-07-27","JUL27",344.2],
+["2026-07-28","SEP26",344.3],
+["2026-07-28","NOV26",348.3],
+["2026-07-28","MAY27",337.5],
+["2026-07-28","JUL27",343.2],
+["2026-07-29","SEP26",342.5],
+["2026-07-29","NOV26",346.5],
+["2026-07-29","MAY27",336.0],
+["2026-07-29","JUL27",342.0],
+["2026-07-30","NOV26",348.8],
+["2026-07-30","MAY27",338.7],
+["2026-07-30","JUL27",345.0],
+["2026-07-31","SEP26",344.5],
+["2026-07-31","NOV26",348.5],
+["2026-07-31","MAY27",339.0],
+["2026-07-31","JUL27",345.0],
+["2026-08-03","SEP26",343.5],
+["2026-08-03","NOV26",349.0],
+["2026-08-03","MAY27",339.2],
+["2026-08-03","JUL27",345.5],
+["2026-08-04","SEP26",342.4],
+["2026-08-04","NOV26",347.4],
+["2026-08-04","MAY27",337.9],
+["2026-08-04","JUL27",343.5],
+["2026-08-05","SEP26",343.0],
+["2026-08-05","NOV26",347.9],
+["2026-08-05","MAY27",338.8],
+["2026-08-05","JUL27",345.3],
+["2026-08-06","AGO26",342.0],
+["2026-08-06","SEP26",344.5],
+["2026-08-06","NOV26",348.6],
+["2026-08-06","MAY27",339.5],
+["2026-08-06","JUL27",346.0],
+["2026-08-07","SEP26",344.1],
+["2026-08-07","NOV26",348.5],
+["2026-08-07","MAY27",339.1],
+["2026-08-07","JUL27",345.4],
+["2026-08-10","SEP26",342.4],
+["2026-08-10","NOV26",347.5],
+["2026-08-10","MAY27",338.2],
+["2026-08-10","JUL27",344.2],
+["2026-08-11","AGO26",340.0],
+["2026-08-11","SEP26",341.8],
+["2026-08-11","NOV26",345.5],
+["2026-08-11","MAY27",336.4],
+["2026-08-11","JUL27",342.9],
+["2026-08-12","AGO26",342.0],
+["2026-08-12","SEP26",344.0],
+["2026-08-12","NOV26",348.7],
+["2026-08-12","MAY27",339.3],
+["2026-08-12","JUL27",345.5],
+["2026-08-13","AGO26",342.5],
+["2026-08-13","SEP26",344.5],
+["2026-08-13","NOV26",349.0],
+["2026-08-13","MAY27",339.9],
+["2026-08-14","SEP26",344.5],
+["2026-08-14","NOV26",348.9],
+["2026-08-14","MAY27",339.2],
+["2026-08-14","JUL27",345.6],
+["2026-08-18","AGO26",347.0],
+["2026-08-18","SEP26",346.0],
+["2026-08-18","NOV26",351.3],
+["2026-08-18","MAY27",341.9],
+["2026-08-18","JUL27",347.8],
+["2026-08-19","AGO26",350.0],
+["2026-08-19","SEP26",352.0],
+["2026-08-19","NOV26",355.5],
+["2026-08-19","MAY27",345.0],
+["2026-08-19","JUL27",351.0],
+["2026-08-20","AGO26",355.0],
+["2026-08-20","SEP26",355.5],
+["2026-08-20","NOV26",359.8],
+["2026-08-20","ENE27",361.5],
+["2026-08-20","MAY27",348.8],
+["2026-08-20","JUL27",354.7],
+["2026-08-21","SEP26",354.7],
+["2026-08-21","NOV26",359.3],
+["2026-08-21","ENE27",361.5],
+["2026-08-21","MAY27",348.4],
+["2026-08-21","JUL27",354.4],
+["2026-08-24","AGO26",350.0],
+["2026-08-24","SEP26",352.6],
+["2026-08-24","NOV26",359.0],
+["2026-08-24","ENE27",360.0],
+["2026-08-24","MAY27",348.3],
+["2026-08-24","JUL27",354.2],
+["2026-08-25","SEP26",355.3],
+["2026-08-25","NOV26",360.9],
+["2026-08-25","ENE27",363.0],
+["2026-08-25","MAY27",349.7],
+["2026-08-25","JUL27",355.8],
+["2026-08-26","SEP26",360.3],
+["2026-08-26","NOV26",364.5],
+["2026-08-26","MAY27",352.5],
+["2026-08-26","JUL27",358.5],
+["2026-08-27","SEP26",360.5],
+["2026-08-27","NOV26",365.0],
+["2026-08-27","ENE27",368.0],
+["2026-08-27","MAY27",351.1],
+["2026-08-27","JUL27",357.0],
+["2026-08-28","SEP26",364.0],
+["2026-08-28","NOV26",370.5],
+["2026-08-28","ENE27",372.5],
+["2026-08-28","MAY27",356.0],
+["2026-08-28","JUL27",362.2],
+["2026-08-31","SEP26",363.0],
+["2026-08-31","NOV26",370.5],
+["2026-08-31","ENE27",372.5],
+["2026-08-31","MAY27",354.2],
+["2026-08-31","JUL27",360.9]
+];
+
+    // Mapa: { "MAY26": { "2026-03-02": 326.1, ... }, ... }
+    var A3_MAP = {};
+    A3_SOJA_2026.forEach(function(r){
+        if (!A3_MAP[r[1]]) A3_MAP[r[1]] = {};
+        A3_MAP[r[1]][r[0]] = r[2];
+    });
+
+    // Buscar precio A3 para una posición en una fecha (o la más cercana anterior, hasta 5 días)
+    function precioA3(posicion, fechaYMD){
+        var posData = A3_MAP[posicion];
+        if (!posData) return null;
+        if (posData[fechaYMD]) return posData[fechaYMD];
+        var d = new Date(fechaYMD+'T12:00:00');
+        for (var i=1; i<=5; i++){
+            d.setDate(d.getDate()-1);
+            var k = d.toISOString().slice(0,10);
+            if (posData[k]) return posData[k];
+        }
+        return null;
+    }
+
+    // Mapear mes de entrega a código de posición A3
+    // Posiciones existentes: MAR26,ABR26,MAY26,JUN26,JUL26,AGO26,SEP26,NOV26,ENE27,MAY27,JUL27
+    function mesEntregaAPosicion(inicioEntregaStr){
+        var mesesCode = {0:'ENE',1:'FEB',2:'MAR',3:'ABR',4:'MAY',5:'JUN',6:'JUL',7:'AGO',8:'SEP',9:'OCT',10:'NOV',11:'DIC'};
+        var ie = null;
+        if (!inicioEntregaStr) return null;
+        var s = inicioEntregaStr.toString().trim();
+        var parts;
+        if (s.includes('-')) parts=s.split('-');
+        else if (s.includes('/')) parts=s.split('/');
+        else return null;
+        if (parts.length===3){
+            var dd=parseInt(parts[0]),mm=parseInt(parts[1])-1,yy=parseInt(parts[2]);
+            if (yy<100) yy+=2000;
+            if (!isNaN(dd)&&!isNaN(mm)&&!isNaN(yy)) ie = new Date(yy,mm,dd);
+        }
+        if (!ie) return null;
+        var code = mesesCode[ie.getMonth()] + String(ie.getFullYear()).slice(-2);
+        // Si la posición exacta existe en A3_MAP, usarla
+        if (A3_MAP[code]) return code;
+        // Si no, buscar la posición más cercana posterior
+        var allPos = Object.keys(A3_MAP).sort();
+        for (var i=0; i<allPos.length; i++){
+            if (allPos[i] >= code) return allPos[i];
+        }
+        return allPos[allPos.length-1] || null;
+    }
+
     function analizarSojaRosario(){
         if(!DB_FULL || !DB_FULL.length){ alert('Esperá a que cargue el dashboard'); return; }
 
         // 1) Mapa de pizarra por fecha YYYY-MM-DD
         var pizMap = {};
-        PIZARRA_SOJA_2026.forEach(function(p){
-            pizMap[p[0]] = { ars: p[1], tc: p[2], usd: p[3] };
-        });
-
-        // Helper: fecha pizarra más cercana (si un día no tiene, busca anterior)
+        PIZARRA_SOJA_2026.forEach(function(p){ pizMap[p[0]] = { ars:p[1], tc:p[2], usd:p[3] }; });
         function pizarraDelDia(ymd){
             if (pizMap[ymd]) return pizMap[ymd];
-            var d = new Date(ymd + 'T12:00:00');
-            for (var i=1; i<=5; i++){
-                d.setDate(d.getDate()-1);
-                var k = d.toISOString().slice(0,10);
-                if (pizMap[k]) return pizMap[k];
+            var d = new Date(ymd+'T12:00:00');
+            for (var i=1;i<=5;i++){ d.setDate(d.getDate()-1); var k=d.toISOString().slice(0,10); if(pizMap[k]) return pizMap[k]; }
+            return null;
+        }
+
+        // 2) Filtrar: Soja, Zona Rosario, mar-ago 2026, solo compras ARGENTRADING
+        var ARGC = '30711629048';
+        var ops = DB_FULL.filter(function(d){
+            if (d.cat !== 'SOJA') return false;
+            if (!d.dObj) return false;
+            var y=d.dObj.getFullYear(), m=d.dObj.getMonth()+1;
+            if (y!==2026 || m<3 || m>8) return false;
+            if (zonaDeDestino(d.destino) !== 'ZONA ROSARIO TOTAL') return false;
+            var cc = String(d.cuitComp||'').replace(/\D/g,'');
+            if (cc !== ARGC) return false;
+            return true;
+        });
+
+        if (!ops.length){ alert('No hay operaciones de soja Argentrading en Zona Rosario mar-ago 2026'); return; }
+
+        // 3) Helpers
+        function ymd(dObj){ return dObj.getFullYear()+'-'+('0'+(dObj.getMonth()+1)).slice(-2)+'-'+('0'+dObj.getDate()).slice(-2); }
+        function parseFecha(s){
+            if (!s) return null;
+            s = s.toString().trim();
+            var parts;
+            if (s.includes('-')) parts=s.split('-');
+            else if (s.includes('/')) parts=s.split('/');
+            else return null;
+            if (parts.length===3){
+                var d=parseInt(parts[0]),m=parseInt(parts[1])-1,y=parseInt(parts[2]);
+                if (y<100) y+=2000;
+                if (!isNaN(d)&&!isNaN(m)&&!isNaN(y)) return new Date(y,m,d);
             }
             return null;
         }
 
-        // 2) Filtrar: Soja, Zona Rosario Total, ene-ago 2026
-        var base = DB_FULL;
-        var ops = base.filter(function(d){
-            if (d.cat !== 'SOJA') return false;
-            if (!d.dObj) return false;
-            var y = d.dObj.getFullYear(), m = d.dObj.getMonth()+1;
-            if (y !== 2026 || m < 3 || m > 8) return false;
-            if (zonaDeDestino(d.destino) !== 'ZONA ROSARIO TOTAL') return false;
-            return true;
-        });
-
-        if (!ops.length){ alert('No hay operaciones de soja en Zona Rosario ene-ago 2026'); return; }
-
-        // 3) Clasificar tipo de negocio
+        // 4) Clasificaciones
         function tipoOp(d){
             var p = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
-            if (!p || p <= 0) return 'A FIJAR';
+            if (!p || p<=0) return 'A FIJAR';
             var mon = (d.moneda||'').toUpperCase();
             if (mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1) return 'PRECIO USD';
             return 'PRECIO ARS';
         }
-
-        function precioNumerico(d){
+        function precioNum(d){
             var p = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
-            return (p && p > 0) ? p : 0;
+            return (p&&p>0) ? p : 0;
+        }
+        function clasifEntrega(dConc, inicioEntregaStr){
+            var ie = parseFecha(inicioEntregaStr);
+            if (!ie) return 'SIN DATO';
+            if (ie.getFullYear()===dConc.getFullYear() && ie.getMonth()===dConc.getMonth()) return 'DISPONIBLE';
+            return 'FORWARD';
+        }
+        function posicionMATba(inicioEntregaStr){
+            var ie = parseFecha(inicioEntregaStr);
+            if (!ie) return '-';
+            var meses=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+            return meses[ie.getMonth()]+' '+ie.getFullYear();
         }
 
-        // 4) Enriquecer operaciones
+        // 5) Enriquecer operaciones
         var opsEnriq = ops.map(function(d){
-            var ymd = d.dObj.getFullYear()+'-'+('0'+(d.dObj.getMonth()+1)).slice(-2)+'-'+('0'+d.dObj.getDate()).slice(-2);
-            var piz = pizarraDelDia(ymd);
+            var fecha = ymd(d.dObj);
+            var piz = pizarraDelDia(fecha);
             var tipo = tipoOp(d);
-            var precioOp = precioNumerico(d);
-            var precioOpUSD = 0;
-            if (tipo === 'PRECIO USD') precioOpUSD = precioOp;
-            else if (tipo === 'PRECIO ARS' && piz) precioOpUSD = precioOp / piz.tc;
+            var precio = precioNum(d);
+            var precioUSD = 0;
+            if (tipo==='PRECIO USD') precioUSD = precio;
+            else if (tipo==='PRECIO ARS' && piz && piz.tc>0) precioUSD = precio / piz.tc;
+            var entrega = clasifEntrega(d.dObj, d.inicioEntrega);
             return {
-                fecha: ymd,
-                vendedor: d.v||'',
-                comprador: d.comprador||'',
-                volumen: d.vol,
-                moneda: d.moneda||'',
-                precio: d.precio||'',
-                precioNum: precioOp,
-                precioUSD: Math.round(precioOpUSD*100)/100,
-                tipo: tipo,
-                condicion: d.condicion||'',
-                tipoNeg: d.tipoNeg||'',
-                inicioEntrega: d.inicioEntrega||'',
-                finEntrega: d.finEntrega||'',
-                observaciones: d.observaciones||'',
-                destino: d.destino||'',
-                pizARS: piz ? piz.ars : '',
-                pizTC: piz ? piz.tc : '',
-                pizUSD: piz ? piz.usd : '',
-                deltaUSD: (tipo !== 'A FIJAR' && precioOpUSD > 0 && piz) ? Math.round((precioOpUSD - piz.usd)*100)/100 : ''
+                fecha: fecha, vendedor: d.v||'', comprador: d.comprador||'',
+                volumen: d.vol, moneda: d.moneda||'', precio: d.precio||'',
+                precioNum: precio, precioUSD: Math.round(precioUSD*100)/100,
+                tipo: tipo, entrega: entrega,
+                posicionMATba: posicionMATba(d.inicioEntrega),
+                condicion: d.condicion||'', tipoNeg: d.tipoNeg||'',
+                inicioEntrega: d.inicioEntrega||'', finEntrega: d.finEntrega||'',
+                observaciones: d.observaciones||'', destino: d.destino||'',
+                pizARS: piz ? piz.ars : '', pizTC: piz ? piz.tc : '', pizUSD: piz ? piz.usd : '',
+                precioRefA3: (entrega==='FORWARD') ? (function(){ var p=mesEntregaAPosicion(d.inicioEntrega); return p ? (precioA3(p,fecha)||'') : ''; })() : '',
+                posA3code: (entrega==='FORWARD') ? (mesEntregaAPosicion(d.inicioEntrega)||'-') : '-',
+                deltaUSD: (function(){
+                    if (tipo==='A FIJAR' || precioUSD<=0) return '';
+                    if (entrega==='DISPONIBLE' && piz) return Math.round((precioUSD-piz.usd)*100)/100;
+                    if (entrega==='FORWARD'){
+                        var posA3 = mesEntregaAPosicion(d.inicioEntrega);
+                        var pA3 = posA3 ? precioA3(posA3, fecha) : null;
+                        if (pA3) return Math.round((precioUSD-pA3)*100)/100;
+                    }
+                    return '';
+                })()
             };
         });
+        opsEnriq.sort(function(a,b){ return a.fecha<b.fecha?-1:a.fecha>b.fecha?1:0; });
 
-        // 5) Análisis semanal
-        var semanasMap = {};
-        opsEnriq.forEach(function(o){
-            var d = new Date(o.fecha+'T12:00:00');
-            var onejan = new Date(d.getFullYear(),0,1);
-            var wk = Math.ceil(((d - onejan)/86400000 + onejan.getDay()+1)/7);
-            var key = 'S'+('0'+wk).slice(-2);
-            if (!semanasMap[key]) semanasMap[key] = {
-                sem:key, fechaDesde:o.fecha, fechaHasta:o.fecha,
-                volTotal:0, volPrecio:0, volFijar:0,
-                sumPrecioXVol:0, pizSumUSD:0, pizCount:0, pizDias:{}
-            };
-            var s = semanasMap[key];
-            if (o.fecha < s.fechaDesde) s.fechaDesde = o.fecha;
-            if (o.fecha > s.fechaHasta) s.fechaHasta = o.fecha;
-            s.volTotal += o.volumen;
-            if (o.tipo !== 'A FIJAR'){ s.volPrecio += o.volumen; if(o.precioUSD>0) s.sumPrecioXVol += o.precioUSD * o.volumen; }
-            else s.volFijar += o.volumen;
-            if (o.pizUSD && !s.pizDias[o.fecha]){ s.pizDias[o.fecha]=o.pizUSD; s.pizSumUSD+=o.pizUSD; s.pizCount++; }
-        });
-        var semanas = Object.keys(semanasMap).sort().map(function(k){
-            var s = semanasMap[k];
-            return {
-                semana: s.sem,
-                desde: s.fechaDesde,
-                hasta: s.fechaHasta,
-                volTotal: s.volTotal,
-                volPrecio: s.volPrecio,
-                volFijar: s.volFijar,
-                pctPrecio: s.volTotal>0 ? Math.round(s.volPrecio/s.volTotal*1000)/10 : 0,
-                precioPromPond: s.volPrecio>0 ? Math.round(s.sumPrecioXVol/s.volPrecio*100)/100 : 0,
-                pizPromUSD: s.pizCount>0 ? Math.round(s.pizSumUSD/s.pizCount*100)/100 : 0
-            };
-        });
-
-        // 6) Análisis mensual
+        // 6) Resumen mensual
         var mesesMap = {};
         opsEnriq.forEach(function(o){
-            var m = o.fecha.slice(0,7); // YYYY-MM
+            var m = o.fecha.slice(0,7);
             if (!mesesMap[m]) mesesMap[m] = {
-                mes:m, volTotal:0, volPrecioUSD:0, volPrecioARS:0, volFijar:0,
-                sumPxV:0, pizSum:0, pizN:0, pizDias:{}, opsCount:0
+                mes:m, volTotal:0, opsTotal:0,
+                dispPrecio:0, dispFijar:0, fwdPrecio:0, fwdFijar:0, sinDato:0,
+                dispSumPxV:0, fwdSumPxV:0, fwdA3Sum:0, fwdA3N:0,
+                pizSum:0, pizN:0, pizDias:{}
             };
             var s = mesesMap[m];
-            s.volTotal += o.volumen;
-            s.opsCount++;
-            if (o.tipo === 'A FIJAR') s.volFijar += o.volumen;
-            else if (o.tipo === 'PRECIO USD'){ s.volPrecioUSD += o.volumen; if(o.precioUSD>0) s.sumPxV += o.precioUSD*o.volumen; }
-            else { s.volPrecioARS += o.volumen; if(o.precioUSD>0) s.sumPxV += o.precioUSD*o.volumen; }
+            s.volTotal += o.volumen; s.opsTotal++;
+            if (o.entrega==='DISPONIBLE'){
+                if (o.tipo==='A FIJAR') s.dispFijar += o.volumen;
+                else { s.dispPrecio += o.volumen; if(o.precioUSD>0) s.dispSumPxV += o.precioUSD*o.volumen; }
+            } else if (o.entrega==='FORWARD'){
+                if (o.tipo==='A FIJAR') s.fwdFijar += o.volumen;
+                else { s.fwdPrecio += o.volumen; if(o.precioUSD>0) s.fwdSumPxV += o.precioUSD*o.volumen; }
+            } else { s.sinDato += o.volumen; }
             if (o.pizUSD && !s.pizDias[o.fecha]){ s.pizDias[o.fecha]=o.pizUSD; s.pizSum+=o.pizUSD; s.pizN++; }
         });
         var meses = Object.keys(mesesMap).sort().map(function(k){
             var s = mesesMap[k];
-            var volConPrecio = s.volPrecioUSD + s.volPrecioARS;
             return {
-                mes: s.mes,
-                ops: s.opsCount,
-                volTotal: s.volTotal,
-                volPrecioUSD: s.volPrecioUSD,
-                volPrecioARS: s.volPrecioARS,
-                volFijar: s.volFijar,
-                pctFijar: s.volTotal>0 ? Math.round(s.volFijar/s.volTotal*1000)/10 : 0,
-                precioPromUSD: volConPrecio>0 ? Math.round(s.sumPxV/volConPrecio*100)/100 : 0,
-                pizPromUSD: s.pizN>0 ? Math.round(s.pizSum/s.pizN*100)/100 : 0
+                mes:s.mes, ops:s.opsTotal, volTotal:s.volTotal,
+                dispPrecio:s.dispPrecio, dispFijar:s.dispFijar,
+                fwdPrecio:s.fwdPrecio, fwdFijar:s.fwdFijar, sinDato:s.sinDato,
+                dispPrecProm: s.dispPrecio>0 ? Math.round(s.dispSumPxV/s.dispPrecio*100)/100 : 0,
+                fwdPrecProm: s.fwdPrecio>0 ? Math.round(s.fwdSumPxV/s.fwdPrecio*100)/100 : 0,
+                pizProm: s.pizN>0 ? Math.round(s.pizSum/s.pizN*100)/100 : 0
             };
         });
 
-        // 7) Generar Excel (SpreadsheetML XML)
+        // 7) Análisis semanal
+        var semanasMap = {};
+        opsEnriq.forEach(function(o){
+            var d = new Date(o.fecha+'T12:00:00');
+            var onejan = new Date(d.getFullYear(),0,1);
+            var wk = Math.ceil(((d-onejan)/86400000+onejan.getDay()+1)/7);
+            var key = 'S'+('0'+wk).slice(-2);
+            if (!semanasMap[key]) semanasMap[key] = {
+                sem:key, desde:o.fecha, hasta:o.fecha,
+                volTotal:0, dispPrecio:0, dispFijar:0, fwdPrecio:0, fwdFijar:0,
+                dispSumPxV:0, pizSum:0, pizN:0, pizDias:{}
+            };
+            var s = semanasMap[key];
+            if (o.fecha<s.desde) s.desde=o.fecha;
+            if (o.fecha>s.hasta) s.hasta=o.fecha;
+            s.volTotal += o.volumen;
+            if (o.entrega==='DISPONIBLE'){
+                if (o.tipo==='A FIJAR') s.dispFijar += o.volumen;
+                else { s.dispPrecio += o.volumen; if(o.precioUSD>0) s.dispSumPxV += o.precioUSD*o.volumen; }
+            } else if (o.entrega==='FORWARD'){
+                if (o.tipo==='A FIJAR') s.fwdFijar += o.volumen;
+                else s.fwdPrecio += o.volumen;
+            }
+            if (o.pizUSD && !s.pizDias[o.fecha]){ s.pizDias[o.fecha]=o.pizUSD; s.pizSum+=o.pizUSD; s.pizN++; }
+        });
+        var semanas = Object.keys(semanasMap).sort().map(function(k){
+            var s = semanasMap[k];
+            return {
+                semana:s.sem, desde:s.desde, hasta:s.hasta, volTotal:s.volTotal,
+                dispPrecio:s.dispPrecio, dispFijar:s.dispFijar,
+                fwdPrecio:s.fwdPrecio, fwdFijar:s.fwdFijar,
+                dispPrecProm: s.dispPrecio>0 ? Math.round(s.dispSumPxV/s.dispPrecio*100)/100 : 0,
+                pizProm: s.pizN>0 ? Math.round(s.pizSum/s.pizN*100)/100 : 0
+            };
+        });
+
+        // 8) Excel SpreadsheetML
         var xml = '<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
         xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
         xml += '<Styles>';
         xml += '<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#005C35" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>';
+        xml += '<Style ss:ID="hdr2"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#0369A1" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>';
         xml += '<Style ss:ID="num"><NumberFormat ss:Format="#,##0"/></Style>';
         xml += '<Style ss:ID="dec"><NumberFormat ss:Format="#,##0.00"/></Style>';
         xml += '<Style ss:ID="pct"><NumberFormat ss:Format="0.0%"/></Style>';
-        xml += '<Style ss:ID="dt"><NumberFormat ss:Format="yyyy-mm-dd"/></Style>';
         xml += '<Style ss:ID="tot"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
         xml += '<Style ss:ID="totd"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style>';
         xml += '<Style ss:ID="totp"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="0.0%"/></Style>';
         xml += '<Style ss:ID="def"><Font ss:FontName="Arial" ss:Size="10"/></Style>';
+        xml += '<Style ss:ID="disp"><Font ss:FontName="Arial" ss:Size="10" ss:Color="#065F46"/><Interior ss:Color="#DCFCE7" ss:Pattern="Solid"/></Style>';
+        xml += '<Style ss:ID="fwd"><Font ss:FontName="Arial" ss:Size="10" ss:Color="#1E40AF"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style>';
+        xml += '<Style ss:ID="fijar"><Font ss:FontName="Arial" ss:Size="10" ss:Color="#9A3412"/><Interior ss:Color="#FFF7ED" ss:Pattern="Solid"/></Style>';
         xml += '</Styles>';
-
         function esc(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-        function sCell(v){ return '<Cell ss:StyleID="def"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
+        function sCell(v,st){ return '<Cell ss:StyleID="'+(st||'def')+'"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
         function nCell(v,st){ return '<Cell ss:StyleID="'+(st||'num')+'"><Data ss:Type="Number">'+(v||0)+'</Data></Cell>'; }
-        function hCell(v){ return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
+        function hCell(v,st){ return '<Cell ss:StyleID="'+(st||'hdr')+'"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
 
-        // --- Hoja 1: Resumen Mensual ---
+        // Hoja 1: Resumen Mensual
         xml += '<Worksheet ss:Name="Resumen Mensual"><Table>';
-        var mhdr = ['Mes','Ops','Vol Total','Vol Precio USD','Vol Precio ARS','Vol a Fijar','% a Fijar','Precio Prom USD','Pizarra Prom USD','Delta USD'];
-        xml += '<Row>' + mhdr.map(hCell).join('') + '</Row>';
-        var totM = {ops:0,vt:0,vpU:0,vpA:0,vf:0,spxv:0};
+        xml += '<Row>'+['Mes','Ops','Vol Total','Disp Precio','Disp a Fijar','Fwd Precio','Fwd a Fijar','Sin Dato',
+            '% Disponible','% Forward','% a Fijar','Prec Prom Disp USD','Pizarra Prom USD','Delta Disp','Prec Prom Fwd USD','Pos MATba'].map(function(h){return hCell(h);}).join('')+'</Row>';
+        var tM={ops:0,vt:0,dp:0,df:0,fp:0,ff:0,sd:0,dspxv:0,fpxv:0};
         meses.forEach(function(m){
-            totM.ops+=m.ops; totM.vt+=m.volTotal; totM.vpU+=m.volPrecioUSD; totM.vpA+=m.volPrecioARS; totM.vf+=m.volFijar;
-            if(m.precioPromUSD>0) totM.spxv += m.precioPromUSD*(m.volPrecioUSD+m.volPrecioARS);
-            var delta = (m.precioPromUSD>0 && m.pizPromUSD>0) ? Math.round((m.precioPromUSD - m.pizPromUSD)*100)/100 : '';
-            xml += '<Row>'+sCell(m.mes)+nCell(m.ops)+nCell(m.volTotal)+nCell(m.volPrecioUSD)+nCell(m.volPrecioARS)+nCell(m.volFijar)+
-                nCell(m.pctFijar/100,'pct')+nCell(m.precioPromUSD,'dec')+nCell(m.pizPromUSD,'dec')+
-                (delta!=='' ? nCell(delta,'dec') : sCell('-'))+'</Row>';
+            tM.ops+=m.ops;tM.vt+=m.volTotal;tM.dp+=m.dispPrecio;tM.df+=m.dispFijar;tM.fp+=m.fwdPrecio;tM.ff+=m.fwdFijar;tM.sd+=m.sinDato;
+            if(m.dispPrecProm>0) tM.dspxv+=m.dispPrecProm*m.dispPrecio;
+            if(m.fwdPrecProm>0) tM.fpxv+=m.fwdPrecProm*m.fwdPrecio;
+            var pD=m.volTotal>0?(m.dispPrecio+m.dispFijar)/m.volTotal:0;
+            var pF=m.volTotal>0?(m.fwdPrecio+m.fwdFijar)/m.volTotal:0;
+            var pFij=m.volTotal>0?(m.dispFijar+m.fwdFijar)/m.volTotal:0;
+            var delta=(m.dispPrecProm>0&&m.pizProm>0)?Math.round((m.dispPrecProm-m.pizProm)*100)/100:'';
+            xml+='<Row>'+sCell(m.mes)+nCell(m.ops)+nCell(m.volTotal)+nCell(m.dispPrecio)+nCell(m.dispFijar)+
+                nCell(m.fwdPrecio)+nCell(m.fwdFijar)+nCell(m.sinDato)+
+                nCell(pD,'pct')+nCell(pF,'pct')+nCell(pFij,'pct')+
+                nCell(m.dispPrecProm,'dec')+nCell(m.pizProm,'dec')+
+                (delta!==''?nCell(delta,'dec'):sCell('-'))+
+                (m.fwdPrecProm>0?nCell(m.fwdPrecProm,'dec'):sCell('-'))+sCell('')+'</Row>';
         });
-        var totPPP = (totM.vpU+totM.vpA)>0 ? Math.round(totM.spxv/(totM.vpU+totM.vpA)*100)/100 : 0;
-        xml += '<Row>'+
-            '<Cell ss:StyleID="tot"><Data ss:Type="String">TOTAL</Data></Cell>'+
-            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.ops+'</Data></Cell>'+
-            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vt+'</Data></Cell>'+
-            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vpU+'</Data></Cell>'+
-            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vpA+'</Data></Cell>'+
-            '<Cell ss:StyleID="tot"><Data ss:Type="Number">'+totM.vf+'</Data></Cell>'+
-            '<Cell ss:StyleID="totp"><Data ss:Type="Number">'+(totM.vt>0?totM.vf/totM.vt:0)+'</Data></Cell>'+
-            '<Cell ss:StyleID="totd"><Data ss:Type="Number">'+totPPP+'</Data></Cell>'+
-            sCell('')+sCell('')+'</Row>';
-        xml += '</Table></Worksheet>';
+        var pDT=tM.vt>0?(tM.dp+tM.df)/tM.vt:0,pFT=tM.vt>0?(tM.fp+tM.ff)/tM.vt:0,pFijT=tM.vt>0?(tM.df+tM.ff)/tM.vt:0;
+        xml+='<Row>'+sCell('TOTAL','tot')+nCell(tM.ops,'tot')+nCell(tM.vt,'tot')+nCell(tM.dp,'tot')+nCell(tM.df,'tot')+
+            nCell(tM.fp,'tot')+nCell(tM.ff,'tot')+nCell(tM.sd,'tot')+
+            nCell(pDT,'totp')+nCell(pFT,'totp')+nCell(pFijT,'totp')+
+            (tM.dp>0?nCell(Math.round(tM.dspxv/tM.dp*100)/100,'totd'):sCell('-','tot'))+sCell('','tot')+sCell('','tot')+
+            (tM.fp>0?nCell(Math.round(tM.fpxv/tM.fp*100)/100,'totd'):sCell('-','tot'))+sCell('','tot')+'</Row>';
+        xml+='</Table></Worksheet>';
 
-        // --- Hoja 2: Análisis Semanal ---
-        xml += '<Worksheet ss:Name="Analisis Semanal"><Table>';
-        var shdr = ['Semana','Desde','Hasta','Vol Total','Vol con Precio','Vol a Fijar','% con Precio','Precio Prom Pond USD','Pizarra Prom USD','Delta USD'];
-        xml += '<Row>' + shdr.map(hCell).join('') + '</Row>';
+        // Hoja 2: Semanal
+        xml+='<Worksheet ss:Name="Analisis Semanal"><Table>';
+        xml+='<Row>'+['Semana','Desde','Hasta','Vol Total','Disp Precio','Disp Fijar','Fwd Precio','Fwd Fijar',
+            'Prec Prom Disp USD','Pizarra Prom USD','Delta Disp'].map(function(h){return hCell(h);}).join('')+'</Row>';
         semanas.forEach(function(s){
-            var delta = (s.precioPromPond>0 && s.pizPromUSD>0) ? Math.round((s.precioPromPond - s.pizPromUSD)*100)/100 : '';
-            xml += '<Row>'+sCell(s.semana)+sCell(s.desde)+sCell(s.hasta)+nCell(s.volTotal)+nCell(s.volPrecio)+nCell(s.volFijar)+
-                nCell(s.pctPrecio/100,'pct')+nCell(s.precioPromPond,'dec')+nCell(s.pizPromUSD,'dec')+
-                (delta!=='' ? nCell(delta,'dec') : sCell('-'))+'</Row>';
+            var delta=(s.dispPrecProm>0&&s.pizProm>0)?Math.round((s.dispPrecProm-s.pizProm)*100)/100:'';
+            xml+='<Row>'+sCell(s.semana)+sCell(s.desde)+sCell(s.hasta)+nCell(s.volTotal)+nCell(s.dispPrecio)+nCell(s.dispFijar)+
+                nCell(s.fwdPrecio)+nCell(s.fwdFijar)+
+                (s.dispPrecProm>0?nCell(s.dispPrecProm,'dec'):sCell('-'))+nCell(s.pizProm,'dec')+
+                (delta!==''?nCell(delta,'dec'):sCell('-'))+'</Row>';
         });
-        xml += '</Table></Worksheet>';
+        xml+='</Table></Worksheet>';
 
-        // --- Hoja 3: Pizarra Diaria ---
-        xml += '<Worksheet ss:Name="Pizarra Diaria"><Table>';
-        xml += '<Row>'+['Fecha','Precio Soja ARS','Tipo Cambio','Precio Soja USD'].map(hCell).join('')+'</Row>';
+        // Hoja 3: Pizarra Diaria
+        xml+='<Worksheet ss:Name="Pizarra Diaria"><Table>';
+        xml+='<Row>'+['Fecha','Precio Soja ARS','Tipo Cambio','Precio Soja USD'].map(function(h){return hCell(h);}).join('')+'</Row>';
         PIZARRA_SOJA_2026.forEach(function(p){
-            xml += '<Row>'+sCell(p[0])+nCell(p[1])+nCell(p[2],'dec')+nCell(p[3],'dec')+'</Row>';
+            xml+='<Row>'+sCell(p[0])+nCell(p[1])+nCell(p[2],'dec')+nCell(p[3],'dec')+'</Row>';
         });
-        xml += '</Table></Worksheet>';
+        xml+='</Table></Worksheet>';
 
-        // --- Hoja 4: Operaciones detalle ---
-        xml += '<Worksheet ss:Name="Operaciones"><Table>';
-        var ohdr = ['Fecha','Vendedor','Comprador','Volumen Tn','Moneda','Precio','Tipo','Precio Op USD','Condicion','Tipo Negocio',
-            'Inicio Entrega','Fin Entrega','Observaciones','Destino','Pizarra ARS','TC','Pizarra USD','Delta vs Pizarra USD'];
-        xml += '<Row>' + ohdr.map(hCell).join('') + '</Row>';
-        opsEnriq.sort(function(a,b){ return a.fecha<b.fecha?-1:a.fecha>b.fecha?1:0; });
-        opsEnriq.forEach(function(o){
-            xml += '<Row>'+sCell(o.fecha)+sCell(o.vendedor)+sCell(o.comprador)+nCell(o.volumen)+sCell(o.moneda)+sCell(o.precio)+
-                sCell(o.tipo)+(o.precioUSD>0?nCell(o.precioUSD,'dec'):sCell('-'))+sCell(o.condicion)+sCell(o.tipoNeg)+
-                sCell(o.inicioEntrega)+sCell(o.finEntrega)+sCell(o.observaciones)+sCell(o.destino)+
+        // Hoja 4: Ops Disponible
+        xml+='<Worksheet ss:Name="Ops Disponible"><Table>';
+        var ohdr=['Fecha','Vendedor','Vol Tn','Tipo','Moneda','Precio','Precio USD','Condicion','Tipo Negocio',
+            'Inicio Entrega','Fin Entrega','Observaciones','Pizarra ARS','TC','Pizarra USD','Delta vs Pizarra'];
+        xml+='<Row>'+ohdr.map(function(h){return hCell(h);}).join('')+'</Row>';
+        opsEnriq.filter(function(o){return o.entrega==='DISPONIBLE';}).forEach(function(o){
+            var st=o.tipo==='A FIJAR'?'fijar':'disp';
+            xml+='<Row>'+sCell(o.fecha,st)+sCell(o.vendedor,st)+nCell(o.volumen)+sCell(o.tipo,st)+sCell(o.moneda)+sCell(o.precio)+
+                (o.precioUSD>0?nCell(o.precioUSD,'dec'):sCell('-'))+sCell(o.condicion)+sCell(o.tipoNeg)+
+                sCell(o.inicioEntrega)+sCell(o.finEntrega)+sCell(o.observaciones)+
                 (o.pizARS?nCell(o.pizARS):sCell('-'))+(o.pizTC?nCell(o.pizTC,'dec'):sCell('-'))+(o.pizUSD?nCell(o.pizUSD,'dec'):sCell('-'))+
                 (o.deltaUSD!==''?nCell(o.deltaUSD,'dec'):sCell('-'))+'</Row>';
         });
-        xml += '</Table></Worksheet>';
+        xml+='</Table></Worksheet>';
 
-        xml += '</Workbook>';
+        // Hoja 5: Ops Forward
+        xml+='<Worksheet ss:Name="Ops Forward"><Table>';
+        var fhdr=['Fecha Concertación','Vendedor','Vol Tn','Tipo','Moneda','Precio','Precio USD','Condicion','Tipo Negocio',
+            'Inicio Entrega','Fin Entrega','Posición MATba','Observaciones','Precio Ajuste A3 USD','Delta vs A3 USD'];
+        xml+='<Row>'+fhdr.map(function(h){return hCell(h,'hdr2');}).join('')+'</Row>';
+        opsEnriq.filter(function(o){return o.entrega==='FORWARD';}).forEach(function(o){
+            var st=o.tipo==='A FIJAR'?'fijar':'fwd';
+            xml+='<Row>'+sCell(o.fecha,st)+sCell(o.vendedor,st)+nCell(o.volumen)+sCell(o.tipo,st)+sCell(o.moneda)+sCell(o.precio)+
+                (o.precioUSD>0?nCell(o.precioUSD,'dec'):sCell('-'))+sCell(o.condicion)+sCell(o.tipoNeg)+
+                sCell(o.inicioEntrega)+sCell(o.finEntrega)+sCell(o.posicionMATba)+sCell(o.observaciones)+
+                (o.precioRefA3?nCell(o.precioRefA3,'dec'):sCell('-'))+(o.deltaUSD!==''?nCell(o.deltaUSD,'dec'):sCell('-'))+'</Row>';
+        });
+        xml+='</Table></Worksheet>';
 
-        // 8) Descargar
-        var blob = new Blob([xml], {type:'application/vnd.ms-excel'});
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'Analisis_Soja_Rosario_2026.xls';
+        // Hoja 6: Sin dato de entrega
+        var sinDato=opsEnriq.filter(function(o){return o.entrega==='SIN DATO';});
+        if(sinDato.length>0){
+            xml+='<Worksheet ss:Name="Sin Dato Entrega"><Table>';
+            xml+='<Row>'+['Fecha','Vendedor','Vol Tn','Tipo','Moneda','Precio','Inicio Entrega','Fin Entrega','Observaciones'].map(function(h){return hCell(h);}).join('')+'</Row>';
+            sinDato.forEach(function(o){
+                xml+='<Row>'+sCell(o.fecha)+sCell(o.vendedor)+nCell(o.volumen)+sCell(o.tipo)+sCell(o.moneda)+sCell(o.precio)+
+                    sCell(o.inicioEntrega)+sCell(o.finEntrega)+sCell(o.observaciones)+'</Row>';
+            });
+            xml+='</Table></Worksheet>';
+        }
+
+        xml+='</Workbook>';
+
+        // 9) Descargar
+        var blob=new Blob([xml],{type:'application/vnd.ms-excel'});
+        var a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download='Analisis_Soja_Argentrading_Rosario_2026.xls';
         a.click();
 
-        console.log('Análisis generado: '+opsEnriq.length+' operaciones, '+meses.length+' meses, '+semanas.length+' semanas');
-        console.log('Resumen rápido:');
-        meses.forEach(function(m){ console.log(m.mes+': '+m.volTotal+' tn ('+m.pctFijar+'% a fijar) | Pizarra prom: '+m.pizPromUSD+' USD'); });
+        // 10) Log
+        var totDisp=0,totFwd=0,totFij=0,totSD=0;
+        opsEnriq.forEach(function(o){
+            if(o.entrega==='DISPONIBLE')totDisp+=o.volumen;
+            else if(o.entrega==='FORWARD')totFwd+=o.volumen;
+            else totSD+=o.volumen;
+            if(o.tipo==='A FIJAR')totFij+=o.volumen;
+        });
+        var totVol=opsEnriq.reduce(function(a,o){return a+o.volumen;},0);
+        console.log('=== Análisis Soja Argentrading — Zona Rosario — Mar/Ago 2026 ===');
+        console.log('Ops: '+opsEnriq.length+' | Vol: '+Math.round(totVol).toLocaleString('de-DE')+' tn');
+        console.log('Disponible: '+Math.round(totDisp).toLocaleString('de-DE')+' tn ('+Math.round(totDisp/totVol*100)+'%) | Forward: '+Math.round(totFwd).toLocaleString('de-DE')+' tn ('+Math.round(totFwd/totVol*100)+'%)');
+        console.log('A fijar (total): '+Math.round(totFij).toLocaleString('de-DE')+' tn ('+Math.round(totFij/totVol*100)+'%) | Sin dato entrega: '+Math.round(totSD).toLocaleString('de-DE')+' tn');
+        meses.forEach(function(m){
+            console.log('  '+m.mes+': '+m.volTotal+' tn | Disp precio:'+m.dispPrecio+' fijar:'+m.dispFijar+' | Fwd precio:'+m.fwdPrecio+' fijar:'+m.fwdFijar+' | Piz:'+m.pizProm+' USD');
+        });
     }
+
 
     </script>
 </body>
