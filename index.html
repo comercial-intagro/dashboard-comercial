@@ -6466,6 +6466,7 @@ ${totalsRow}
 
     // ================================================================
     // EXPORT: Disponible a precio — volumen diario + precio ponderado vs pizarra
+    // Genera HTML con gráfico Chart.js + tabla de datos
     // Ejecutar desde F12: exportDisponibleDiario()
     // ================================================================
     function exportDisponibleDiario(){
@@ -6496,10 +6497,8 @@ ${totalsRow}
             if (zonaDeDestino(d.destino)!=='ZONA ROSARIO TOTAL') return false;
             var cc=String(d.cuitComp||'').replace(/\D/g,'');
             if (cc!==ARGC) return false;
-            // Disponible: inicio entrega en el mismo mes que concertación
             var ie = parseFechaLocal(d.inicioEntrega);
             if (!ie || ie.getFullYear()!==d.dObj.getFullYear() || ie.getMonth()!==d.dObj.getMonth()) return false;
-            // A precio (no a fijar)
             var p = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
             if (!p || p<=0) return false;
             return true;
@@ -6507,24 +6506,19 @@ ${totalsRow}
 
         if (!ops.length){ alert('No hay operaciones disponible a precio en el filtro'); return; }
 
-        // Agrupar por día
+        // Agrupar por día — precio en ARS directamente
         var diasMap = {};
         ops.forEach(function(d){
             var fecha = ymdFmt(d.dObj);
-            if (!diasMap[fecha]) diasMap[fecha] = { vol:0, sumPxV:0, ops:0 };
+            if (!diasMap[fecha]) diasMap[fecha] = { vol:0, sumPxV_ars:0, ops:0 };
             var s = diasMap[fecha];
             var precio = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
-            var mon = (d.moneda||'').toUpperCase();
-            var precioUSD = 0;
-            if (mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1) precioUSD = precio;
-            else { var piz = pizarraDelDia(fecha); if (piz && piz.tc>0) precioUSD = precio / piz.tc; }
             s.vol += d.vol;
-            s.sumPxV += precioUSD * d.vol;
+            s.sumPxV_ars += precio * d.vol;
             s.ops++;
         });
 
-        // Armar array ordenado por fecha, incluyendo todos los días hábiles de pizarra
-        // para que el gráfico no tenga huecos en días sin operación
+        // Todos los días hábiles mar-ago
         var allDates = PIZARRA_SOJA_2026
             .map(function(p){ return p[0]; })
             .filter(function(f){ return f>='2026-03-01' && f<='2026-08-31'; })
@@ -6533,73 +6527,131 @@ ${totalsRow}
         var rows = allDates.map(function(fecha){
             var dia = diasMap[fecha];
             var piz = pizarraDelDia(fecha);
+            var precPondARS = (dia && dia.vol>0) ? Math.round(dia.sumPxV_ars/dia.vol) : null;
+            var precPondUSD = (precPondARS && piz && piz.tc>0) ? Math.round(precPondARS/piz.tc*100)/100 : null;
             return {
                 fecha: fecha,
+                fechaCorta: fecha.slice(5), // MM-DD
                 volumen: dia ? Math.round(dia.vol) : 0,
                 ops: dia ? dia.ops : 0,
-                precioPond: (dia && dia.vol>0) ? Math.round(dia.sumPxV/dia.vol*100)/100 : '',
-                pizarraUSD: piz ? piz.usd : '',
-                pizarraARS: piz ? piz.ars : '',
-                tc: piz ? piz.tc : ''
+                precioARS: precPondARS,
+                pizarraARS: piz ? piz.ars : null,
+                deltaARS: (precPondARS && piz) ? precPondARS - piz.ars : null,
+                precioUSD: precPondUSD,
+                pizarraUSD: piz ? piz.usd : null,
+                deltaUSD: (precPondUSD && piz) ? Math.round((precPondUSD-piz.usd)*100)/100 : null,
+                tc: piz ? piz.tc : null
             };
         });
 
-        // Generar Excel
-        var xml = '<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
-        xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
-        xml += '<Styles>';
-        xml += '<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#005C35" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>';
-        xml += '<Style ss:ID="num"><NumberFormat ss:Format="#,##0"/></Style>';
-        xml += '<Style ss:ID="dec"><NumberFormat ss:Format="#,##0.00"/></Style>';
-        xml += '<Style ss:ID="def"><Font ss:FontName="Arial" ss:Size="10"/></Style>';
-        xml += '<Style ss:ID="tot"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
-        xml += '<Style ss:ID="totd"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style>';
-        xml += '<Style ss:ID="volbar"><Font ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#DCFCE7" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
-        xml += '</Styles>';
-
-        function esc(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-        function sCell(v,st){ return '<Cell ss:StyleID="'+(st||'def')+'"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
-        function nCell(v,st){ return '<Cell ss:StyleID="'+(st||'num')+'"><Data ss:Type="Number">'+(v||0)+'</Data></Cell>'; }
-        function hCell(v){ return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
-
-        // Hoja: Data para Gráfico
-        xml += '<Worksheet ss:Name="Disponible Diario"><Table>';
-        xml += '<Row>'+['Fecha','Volumen Tn','Ops','Precio Ponderado USD','Pizarra USD','Delta USD','Pizarra ARS','TC'].map(hCell).join('')+'</Row>';
-
-        var totVol=0, totOps=0, totSumPxV=0, totVolConPrecio=0;
+        // Labels y datasets para Chart.js
+        var labels = [], volData = [], precARS = [], pizARS = [];
         rows.forEach(function(r){
-            var delta = (r.precioPond!=='' && r.pizarraUSD!=='') ? Math.round((r.precioPond-r.pizarraUSD)*100)/100 : '';
-            xml += '<Row>'+sCell(r.fecha)+
-                (r.volumen>0 ? nCell(r.volumen,'volbar') : nCell(0))+
-                nCell(r.ops)+
-                (r.precioPond!=='' ? nCell(r.precioPond,'dec') : sCell('-'))+
-                (r.pizarraUSD!=='' ? nCell(r.pizarraUSD,'dec') : sCell('-'))+
-                (delta!=='' ? nCell(delta,'dec') : sCell('-'))+
-                (r.pizarraARS!=='' ? nCell(r.pizarraARS) : sCell('-'))+
-                (r.tc!=='' ? nCell(r.tc,'dec') : sCell('-'))+'</Row>';
-            totVol += r.volumen;
-            totOps += r.ops;
-            if (r.precioPond!=='' && r.volumen>0){ totSumPxV += r.precioPond*r.volumen; totVolConPrecio += r.volumen; }
+            labels.push(r.fechaCorta);
+            volData.push(r.volumen);
+            precARS.push(r.precioARS);
+            pizARS.push(r.pizarraARS);
         });
 
-        var totPrecProm = totVolConPrecio>0 ? Math.round(totSumPxV/totVolConPrecio*100)/100 : 0;
-        xml += '<Row>'+sCell('TOTAL','tot')+nCell(totVol,'tot')+nCell(totOps,'tot')+nCell(totPrecProm,'totd')+sCell('','tot')+sCell('','tot')+sCell('','tot')+sCell('','tot')+'</Row>';
-        xml += '</Table></Worksheet>';
+        // Tabla HTML con los datos
+        var tableRows = '';
+        var totVol=0, totOps=0, totSumARS=0, totVolP=0;
+        rows.forEach(function(r){
+            if (r.volumen>0){
+                totVol+=r.volumen; totOps+=r.ops;
+                if(r.precioARS){totSumARS+=r.precioARS*r.volumen; totVolP+=r.volumen;}
+                var cls = (r.deltaARS!==null && r.deltaARS>=0) ? 'color:#16a34a;' : 'color:#dc2626;';
+                tableRows += '<tr>'+
+                    '<td>'+r.fecha+'</td>'+
+                    '<td style="text-align:right;font-weight:700;">'+r.volumen.toLocaleString('de-DE')+'</td>'+
+                    '<td style="text-align:right;">'+r.ops+'</td>'+
+                    '<td style="text-align:right;font-weight:700;">'+((r.precioARS||0).toLocaleString('de-DE'))+'</td>'+
+                    '<td style="text-align:right;">'+((r.pizarraARS||0).toLocaleString('de-DE'))+'</td>'+
+                    '<td style="text-align:right;font-weight:700;'+cls+'">'+((r.deltaARS||0).toLocaleString('de-DE'))+'</td>'+
+                    '<td style="text-align:right;">'+(r.precioUSD||'-')+'</td>'+
+                    '<td style="text-align:right;">'+(r.pizarraUSD||'-')+'</td>'+
+                    '<td style="text-align:right;'+cls+'">'+(r.deltaUSD!==null?r.deltaUSD:'-')+'</td>'+
+                    '<td style="text-align:right;">'+(r.tc||'-')+'</td>'+
+                    '</tr>';
+            }
+        });
+        var totPrecPromARS = totVolP>0 ? Math.round(totSumARS/totVolP) : 0;
 
-        xml += '</Workbook>';
+        // Generar HTML completo
+        var chartHTML = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Disponible Diario — Argentrading Soja Rosario 2026</title>\n'+
+            '<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>\n'+
+            '<style>\n'+
+            'body{font-family:Inter,Arial,sans-serif;margin:0;padding:20px;background:#f8fafc;color:#1e293b;}\n'+
+            'h1{color:#005c35;font-size:1.3rem;margin-bottom:4px;}\n'+
+            'h2{color:#005c35;font-size:1rem;margin:30px 0 10px;}\n'+
+            '.sub{color:#64748b;font-size:0.85rem;margin-bottom:20px;}\n'+
+            '.chart-wrap{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:30px;overflow-x:auto;}\n'+
+            '.chart-inner{min-width:2200px;height:420px;}\n'+
+            'table{border-collapse:collapse;width:100%;font-size:0.8rem;}\n'+
+            'th{background:#005c35;color:#fff;padding:6px 10px;text-align:left;font-size:0.75rem;}\n'+
+            'td{padding:4px 10px;border-bottom:1px solid #e2e8f0;}\n'+
+            'tr:hover td{background:#f0fdf4;}\n'+
+            '.tot td{font-weight:800;background:#f0fdf4;color:#005c35;border-top:2px solid #005c35;}\n'+
+            '.kpi{display:inline-block;background:#fff;border-radius:10px;padding:12px 24px;margin:0 12px 12px 0;box-shadow:0 1px 4px rgba(0,0,0,.06);}\n'+
+            '.kpi b{display:block;font-size:1.4rem;color:#005c35;}\n'+
+            '.kpi span{font-size:0.75rem;color:#64748b;}\n'+
+            '</style></head><body>\n'+
+            '<h1>Compras Disponible a Precio — Argentrading SA</h1>\n'+
+            '<div class="sub">Soja · Zona Rosario · Marzo – Agosto 2026</div>\n'+
+            '<div>\n'+
+            '<div class="kpi"><b>'+totVol.toLocaleString('de-DE')+' Tn</b><span>Volumen total</span></div>\n'+
+            '<div class="kpi"><b>'+totOps+'</b><span>Operaciones</span></div>\n'+
+            '<div class="kpi"><b>$'+totPrecPromARS.toLocaleString('de-DE')+'</b><span>Precio prom. ponderado ARS</span></div>\n'+
+            '</div>\n'+
+            '<h2>Volumen diario vs Precio ponderado vs Pizarra (ARS/Tn)</h2>\n'+
+            '<div class="chart-wrap"><div class="chart-inner"><canvas id="chart1"></canvas></div></div>\n'+
+            '<h2>Detalle diario (solo días con operación)</h2>\n'+
+            '<table><thead><tr><th>Fecha</th><th>Vol Tn</th><th>Ops</th><th>Precio Pond ARS</th><th>Pizarra ARS</th><th>Delta ARS</th><th>Precio USD</th><th>Pizarra USD</th><th>Delta USD</th><th>TC</th></tr></thead>\n'+
+            '<tbody>'+tableRows+
+            '<tr class="tot"><td>TOTAL</td><td style="text-align:right;">'+totVol.toLocaleString('de-DE')+'</td><td style="text-align:right;">'+totOps+'</td><td style="text-align:right;">'+totPrecPromARS.toLocaleString('de-DE')+'</td><td colspan="6"></td></tr>\n'+
+            '</tbody></table>\n'+
+            '<script>\n'+
+            'var labels='+JSON.stringify(labels)+';\n'+
+            'var volData='+JSON.stringify(volData)+';\n'+
+            'var precARS='+JSON.stringify(precARS)+';\n'+
+            'var pizARS='+JSON.stringify(pizARS)+';\n'+
+            'new Chart(document.getElementById("chart1"),{\n'+
+            '  type:"bar",\n'+
+            '  data:{\n'+
+            '    labels:labels,\n'+
+            '    datasets:[\n'+
+            '      {type:"bar",label:"Volumen Tn",data:volData,backgroundColor:"rgba(0,92,53,0.25)",borderColor:"#005c35",borderWidth:1,yAxisID:"yVol",order:3,barPercentage:0.85},\n'+
+            '      {type:"line",label:"Precio Ponderado ARS",data:precARS,borderColor:"#dc2626",backgroundColor:"#dc2626",borderWidth:2.5,pointRadius:function(ctx){return volData[ctx.dataIndex]>0?4:0;},pointBackgroundColor:"#dc2626",fill:false,yAxisID:"yPrice",spanGaps:true,order:1},\n'+
+            '      {type:"line",label:"Pizarra Rosario ARS",data:pizARS,borderColor:"#2563eb",backgroundColor:"#2563eb",borderWidth:2,pointRadius:0,fill:false,yAxisID:"yPrice",order:2}\n'+
+            '    ]\n'+
+            '  },\n'+
+            '  options:{\n'+
+            '    responsive:true,maintainAspectRatio:false,\n'+
+            '    interaction:{mode:"index",intersect:false},\n'+
+            '    plugins:{legend:{position:"top",labels:{usePointStyle:true,padding:16,font:{size:12}}},\n'+
+            '      tooltip:{callbacks:{label:function(ctx){var v=ctx.raw; if(v===null||v===undefined)return null; if(ctx.dataset.yAxisID==="yVol")return ctx.dataset.label+": "+v.toLocaleString("de-DE")+" tn"; return ctx.dataset.label+": $"+v.toLocaleString("de-DE"); }}}\n'+
+            '    },\n'+
+            '    scales:{\n'+
+            '      x:{ticks:{maxRotation:90,font:{size:9}},grid:{display:false}},\n'+
+            '      yVol:{position:"right",title:{display:true,text:"Volumen (Tn)",font:{size:11}},grid:{display:false},ticks:{font:{size:10}},beginAtZero:true},\n'+
+            '      yPrice:{position:"left",title:{display:true,text:"Precio ARS/Tn",font:{size:11}},grid:{color:"#e2e8f0"},ticks:{font:{size:10},callback:function(v){return "$"+v.toLocaleString("de-DE");}}}\n'+
+            '    }\n'+
+            '  }\n'+
+            '});\n'+
+            '<\/script></body></html>';
 
-        var blob = new Blob([xml], {type:'application/vnd.ms-excel'});
+        var blob = new Blob([chartHTML], {type:'text/html'});
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'Disponible_Diario_Argentrading_2026.xls';
+        a.download = 'Disponible_Diario_Argentrading_2026.html';
         a.click();
 
-        var diasConOps = rows.filter(function(r){return r.volumen>0;}).length;
         console.log('=== Export Disponible Diario ===');
-        console.log('Días con operación: '+diasConOps+' de '+allDates.length+' hábiles');
+        console.log('Días con operación: '+rows.filter(function(r){return r.volumen>0;}).length+' de '+allDates.length+' hábiles');
         console.log('Vol total: '+totVol.toLocaleString('de-DE')+' tn | Ops: '+totOps);
-        console.log('Precio ponderado promedio: '+totPrecProm+' USD/tn');
+        console.log('Precio ponderado promedio: $'+totPrecPromARS.toLocaleString('de-DE')+' ARS/tn');
     }
+
 
     </script>
 </body>
