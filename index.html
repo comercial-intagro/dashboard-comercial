@@ -6725,6 +6725,268 @@ ${totalsRow}
     }
 
 
+    // ================================================================
+    // EXPORT: Forward MAY27 — volumen diario + precio ponderado vs A3 MAY27
+    // Ejecutar desde F12: exportForwardMay27()
+    // ================================================================
+    function exportForwardMay27(){
+        if(!DB_FULL || !DB_FULL.length){ alert('Esperá a que cargue el dashboard'); return; }
+
+        var ARGC = '30711629048';
+        var POSICION = 'MAY27';
+        var POSICION_LABEL = 'Mayo 2027';
+        var pizMap = {};
+        PIZARRA_SOJA_2026.forEach(function(p){ pizMap[p[0]] = { ars:p[1], tc:p[2], usd:p[3] }; });
+        function pizarraDelDia(ymd){
+            if (pizMap[ymd]) return pizMap[ymd];
+            var d = new Date(ymd+'T12:00:00');
+            for (var i=1;i<=5;i++){ d.setDate(d.getDate()-1); var k=d.toISOString().slice(0,10); if(pizMap[k]) return pizMap[k]; }
+            return null;
+        }
+        function ymdFmt(dObj){ return dObj.getFullYear()+'-'+('0'+(dObj.getMonth()+1)).slice(-2)+'-'+('0'+dObj.getDate()).slice(-2); }
+        function parseFechaLocal(s){
+            if (!s) return null; s=s.toString().trim(); var parts;
+            if (s.includes('-')) parts=s.split('-'); else if (s.includes('/')) parts=s.split('/'); else return null;
+            if (parts.length===3){ var d=parseInt(parts[0]),m=parseInt(parts[1])-1,y=parseInt(parts[2]); if(y<100)y+=2000; if(!isNaN(d)&&!isNaN(m)&&!isNaN(y)) return new Date(y,m,d); }
+            return null;
+        }
+        function mesEntregaCode(inicioEntregaStr){
+            var ie = parseFechaLocal(inicioEntregaStr);
+            if (!ie) return null;
+            var meses=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+            return meses[ie.getMonth()] + String(ie.getFullYear()).slice(-2);
+        }
+
+        // Filtrar: soja, zona rosario, argentrading, mar-ago 2026, FORWARD, posición MAY27, a precio
+        var ops = DB_FULL.filter(function(d){
+            if (d.cat!=='SOJA' || !d.dObj) return false;
+            var y=d.dObj.getFullYear(), m=d.dObj.getMonth()+1;
+            if (y!==2026 || m<3 || m>8) return false;
+            if (zonaDeDestino(d.destino)!=='ZONA ROSARIO TOTAL') return false;
+            var cc=String(d.cuitComp||'').replace(/\D/g,'');
+            if (cc!==ARGC) return false;
+            // Forward: inicio entrega en mes distinto al de concertación
+            var ie = parseFechaLocal(d.inicioEntrega);
+            if (!ie) return false;
+            if (ie.getFullYear()===d.dObj.getFullYear() && ie.getMonth()===d.dObj.getMonth()) return false;
+            // Posición = MAY27
+            var code = mesEntregaCode(d.inicioEntrega);
+            if (code !== POSICION) return false;
+            // A precio
+            var p = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            if (!p || p<=0) return false;
+            return true;
+        });
+
+        if (!ops.length){ alert('No hay operaciones forward '+POSICION_LABEL+' a precio en el filtro'); return; }
+
+        // Agrupar por día — precio en USD. Si viene en ARS, convertir con TC
+        var diasMap = {};
+        ops.forEach(function(d){
+            var fecha = ymdFmt(d.dObj);
+            if (!diasMap[fecha]) diasMap[fecha] = { vol:0, sumPxV_usd:0, ops:0 };
+            var s = diasMap[fecha];
+            var precio = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            var mon = (d.moneda||'').toUpperCase();
+            var precioUSD = precio;
+            if (!(mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1)){
+                // Viene en ARS, convertir a USD
+                var piz = pizarraDelDia(fecha);
+                precioUSD = (piz && piz.tc>0) ? precio / piz.tc : 0;
+            }
+            if (precioUSD > 0){
+                s.vol += d.vol;
+                s.sumPxV_usd += precioUSD * d.vol;
+                s.ops++;
+            }
+        });
+
+        // Todos los días hábiles que tienen cotización MAY27
+        var a3May27 = {};
+        A3_SOJA_2026.forEach(function(r){ if(r[1]===POSICION) a3May27[r[0]]=r[2]; });
+        function a3DelDia(ymd){
+            if (a3May27[ymd]) return a3May27[ymd];
+            var d = new Date(ymd+'T12:00:00');
+            for (var i=1;i<=5;i++){ d.setDate(d.getDate()-1); var k=d.toISOString().slice(0,10); if(a3May27[k]) return a3May27[k]; }
+            return null;
+        }
+        var allDates = Object.keys(a3May27).sort();
+
+        var rows = allDates.map(function(fecha){
+            var dia = diasMap[fecha];
+            var a3 = a3DelDia(fecha);
+            var precPondUSD = (dia && dia.vol>0) ? Math.round(dia.sumPxV_usd/dia.vol*100)/100 : null;
+            return {
+                fecha: fecha,
+                fechaCorta: fecha.slice(5),
+                volumen: dia ? Math.round(dia.vol) : 0,
+                ops: dia ? dia.ops : 0,
+                precioUSD: precPondUSD,
+                a3USD: a3,
+                deltaUSD: (precPondUSD && a3) ? Math.round((precPondUSD-a3)*100)/100 : null
+            };
+        });
+
+        // Chart.js HTML
+        var labels=[], volData=[], precUSD=[], a3Data=[];
+        rows.forEach(function(r){
+            labels.push(r.fechaCorta);
+            volData.push(r.volumen);
+            precUSD.push(r.precioUSD);
+            a3Data.push(r.a3USD);
+        });
+
+        var totVol=0, totOps=0, totSumUSD=0, totVolP=0;
+        var tableRows = '';
+        rows.forEach(function(r){
+            if (r.volumen>0){
+                totVol+=r.volumen; totOps+=r.ops;
+                if(r.precioUSD){totSumUSD+=r.precioUSD*r.volumen; totVolP+=r.volumen;}
+                var cls = (r.deltaUSD!==null && r.deltaUSD>=0) ? 'color:#16a34a;' : 'color:#dc2626;';
+                tableRows += '<tr>'+
+                    '<td>'+r.fecha+'</td>'+
+                    '<td style="text-align:right;font-weight:700;">'+r.volumen.toLocaleString('de-DE')+'</td>'+
+                    '<td style="text-align:right;">'+r.ops+'</td>'+
+                    '<td style="text-align:right;font-weight:700;">'+(r.precioUSD||'-')+'</td>'+
+                    '<td style="text-align:right;">'+(r.a3USD||'-')+'</td>'+
+                    '<td style="text-align:right;font-weight:700;'+cls+'">'+(r.deltaUSD!==null?r.deltaUSD:'-')+'</td>'+
+                    '</tr>';
+            }
+        });
+        var totPrecPromUSD = totVolP>0 ? Math.round(totSumUSD/totVolP*100)/100 : 0;
+
+        var chartHTML = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Forward '+POSICION_LABEL+' — Argentrading Soja Rosario 2026</title>\n'+
+            '<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>\n'+
+            '<style>\n'+
+            'body{font-family:Inter,Arial,sans-serif;margin:0;padding:20px;background:#f8fafc;color:#1e293b;}\n'+
+            'h1{color:#0369a1;font-size:1.3rem;margin-bottom:4px;}\n'+
+            'h2{color:#0369a1;font-size:1rem;margin:30px 0 10px;}\n'+
+            '.sub{color:#64748b;font-size:0.85rem;margin-bottom:20px;}\n'+
+            '.chart-wrap{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:30px;overflow-x:auto;}\n'+
+            '.chart-inner{min-width:2200px;height:420px;}\n'+
+            'table{border-collapse:collapse;width:100%;font-size:0.8rem;}\n'+
+            'th{background:#0369a1;color:#fff;padding:6px 10px;text-align:left;font-size:0.75rem;}\n'+
+            'td{padding:4px 10px;border-bottom:1px solid #e2e8f0;}\n'+
+            'tr:hover td{background:#eff6ff;}\n'+
+            '.tot td{font-weight:800;background:#eff6ff;color:#0369a1;border-top:2px solid #0369a1;}\n'+
+            '.kpi{display:inline-block;background:#fff;border-radius:10px;padding:12px 24px;margin:0 12px 12px 0;box-shadow:0 1px 4px rgba(0,0,0,.06);}\n'+
+            '.kpi b{display:block;font-size:1.4rem;color:#0369a1;}\n'+
+            '.kpi span{font-size:0.75rem;color:#64748b;}\n'+
+            '</style></head><body>\n'+
+            '<h1>Compras Forward '+POSICION_LABEL+' a Precio — Argentrading SA</h1>\n'+
+            '<div class="sub">Soja · Zona Rosario · Concertaciones Marzo – Agosto 2026 · Referencia: A3 SOJ.ROS/'+POSICION+'</div>\n'+
+            '<div>\n'+
+            '<div class="kpi"><b>'+totVol.toLocaleString('de-DE')+' Tn</b><span>Volumen total</span></div>\n'+
+            '<div class="kpi"><b>'+totOps+'</b><span>Operaciones</span></div>\n'+
+            '<div class="kpi"><b>U$D '+totPrecPromUSD+'</b><span>Precio prom. ponderado</span></div>\n'+
+            '</div>\n'+
+            '<h2>Volumen diario vs Precio ponderado vs A3 '+POSICION+' (USD/Tn)</h2>\n'+
+            '<div class="chart-wrap"><div class="chart-inner"><canvas id="chart1"></canvas></div></div>\n'+
+            '<h2>Detalle diario (solo días con operación)</h2>\n'+
+            '<table><thead><tr><th>Fecha</th><th>Vol Tn</th><th>Ops</th><th>Precio Pond USD</th><th>A3 '+POSICION+' USD</th><th>Delta USD</th></tr></thead>\n'+
+            '<tbody>'+tableRows+
+            '<tr class="tot"><td>TOTAL</td><td style="text-align:right;">'+totVol.toLocaleString('de-DE')+'</td><td style="text-align:right;">'+totOps+'</td><td style="text-align:right;">'+totPrecPromUSD+'</td><td colspan="2"></td></tr>\n'+
+            '</tbody></table>\n'+
+            '<script>\n'+
+            'var labels='+JSON.stringify(labels)+';\n'+
+            'var volData='+JSON.stringify(volData)+';\n'+
+            'var precUSD='+JSON.stringify(precUSD)+';\n'+
+            'var a3Data='+JSON.stringify(a3Data)+';\n'+
+            'new Chart(document.getElementById("chart1"),{\n'+
+            '  type:"bar",\n'+
+            '  data:{\n'+
+            '    labels:labels,\n'+
+            '    datasets:[\n'+
+            '      {type:"bar",label:"Volumen Tn",data:volData,backgroundColor:"rgba(3,105,161,0.2)",borderColor:"#0369a1",borderWidth:1,yAxisID:"yVol",order:3,barPercentage:0.85},\n'+
+            '      {type:"line",label:"Precio Ponderado USD",data:precUSD,borderColor:"#dc2626",backgroundColor:"#dc2626",borderWidth:2.5,pointRadius:function(ctx){return volData[ctx.dataIndex]>0?4:0;},pointBackgroundColor:"#dc2626",fill:false,yAxisID:"yPrice",spanGaps:true,order:1},\n'+
+            '      {type:"line",label:"A3 SOJ.ROS/'+POSICION+'",data:a3Data,borderColor:"#2563eb",backgroundColor:"#2563eb",borderWidth:2,pointRadius:0,fill:false,yAxisID:"yPrice",order:2}\n'+
+            '    ]\n'+
+            '  },\n'+
+            '  options:{\n'+
+            '    responsive:true,maintainAspectRatio:false,\n'+
+            '    interaction:{mode:"index",intersect:false},\n'+
+            '    plugins:{legend:{position:"top",labels:{usePointStyle:true,padding:16,font:{size:12}}},\n'+
+            '      tooltip:{callbacks:{label:function(ctx){var v=ctx.raw; if(v===null||v===undefined)return null; if(ctx.dataset.yAxisID==="yVol")return ctx.dataset.label+": "+v.toLocaleString("de-DE")+" tn"; return ctx.dataset.label+": U$D "+v; }}}\n'+
+            '    },\n'+
+            '    scales:{\n'+
+            '      x:{ticks:{maxRotation:90,font:{size:9}},grid:{display:false}},\n'+
+            '      yVol:{position:"right",title:{display:true,text:"Volumen (Tn)",font:{size:11}},grid:{display:false},ticks:{font:{size:10}},beginAtZero:true},\n'+
+            '      yPrice:{position:"left",title:{display:true,text:"USD/Tn",font:{size:11}},grid:{color:"#e2e8f0"},ticks:{font:{size:10},callback:function(v){return "U$D "+v;}}}\n'+
+            '    }\n'+
+            '  }\n'+
+            '});\n'+
+            '<\/script></body></html>';
+
+        // Descargar HTML
+        var blob = new Blob([chartHTML], {type:'text/html'});
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Forward_'+POSICION+'_Argentrading_2026.html';
+        a.click();
+
+        // Excel de verificación
+        var xmlX = '<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
+        xmlX += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+        xmlX += '<Styles>';
+        xmlX += '<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#0369A1" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>';
+        xmlX += '<Style ss:ID="num"><NumberFormat ss:Format="#,##0"/></Style>';
+        xmlX += '<Style ss:ID="dec"><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xmlX += '<Style ss:ID="def"><Font ss:FontName="Arial" ss:Size="10"/></Style>';
+        xmlX += '<Style ss:ID="tot"><Font ss:Bold="1" ss:Color="#0369A1" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#EFF6FF" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
+        xmlX += '<Style ss:ID="totd"><Font ss:Bold="1" ss:Color="#0369A1" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#EFF6FF" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xmlX += '</Styles>';
+        function escX(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function sCellX(v){ return '<Cell ss:StyleID="def"><Data ss:Type="String">'+escX(v)+'</Data></Cell>'; }
+        function nCellX(v,st){ return '<Cell ss:StyleID="'+(st||'num')+'"><Data ss:Type="Number">'+(v||0)+'</Data></Cell>'; }
+        function hCellX(v){ return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+escX(v)+'</Data></Cell>'; }
+
+        // Hoja 1: Operaciones crudas
+        xmlX += '<Worksheet ss:Name="Operaciones Crudas '+POSICION+'"><Table>';
+        xmlX += '<Row>'+['Fecha Concerti.','Vendedor','Vol Tn','Moneda','Precio (crudo)','Precio USD','A3 '+POSICION+' USD','Delta USD','Inicio Entrega','Fin Entrega','Observaciones'].map(hCellX).join('')+'</Row>';
+        ops.sort(function(a,b){ var fa=ymdFmt(a.dObj),fb=ymdFmt(b.dObj); return fa<fb?-1:fa>fb?1:0; });
+        ops.forEach(function(d){
+            var fecha = ymdFmt(d.dObj);
+            var precio = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            var mon = (d.moneda||'').toUpperCase();
+            var precioUSD = precio;
+            if (!(mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1)){
+                var piz = pizarraDelDia(fecha);
+                precioUSD = (piz && piz.tc>0) ? Math.round(precio/piz.tc*100)/100 : 0;
+            }
+            var a3 = a3DelDia(fecha);
+            var delta = (precioUSD>0 && a3) ? Math.round((precioUSD-a3)*100)/100 : '';
+            xmlX += '<Row>'+sCellX(fecha)+sCellX(d.v||'')+nCellX(d.vol)+sCellX(d.moneda||'')+sCellX(d.precio||'')+
+                nCellX(precioUSD,'dec')+(a3?nCellX(a3,'dec'):sCellX('-'))+
+                (delta!==''?nCellX(delta,'dec'):sCellX('-'))+
+                sCellX(d.inicioEntrega||'')+sCellX(d.finEntrega||'')+sCellX(d.observaciones||'')+'</Row>';
+        });
+        xmlX += '</Table></Worksheet>';
+
+        // Hoja 2: Resumen diario
+        xmlX += '<Worksheet ss:Name="Resumen Diario '+POSICION+'"><Table>';
+        xmlX += '<Row>'+['Fecha','Vol Tn','Ops','Precio Pond USD','A3 '+POSICION+' USD','Delta USD'].map(hCellX).join('')+'</Row>';
+        rows.forEach(function(r){
+            if (r.volumen>0){
+                xmlX += '<Row>'+sCellX(r.fecha)+nCellX(r.volumen)+nCellX(r.ops)+
+                    (r.precioUSD?nCellX(r.precioUSD,'dec'):sCellX('-'))+
+                    (r.a3USD?nCellX(r.a3USD,'dec'):sCellX('-'))+
+                    (r.deltaUSD!==null?nCellX(r.deltaUSD,'dec'):sCellX('-'))+'</Row>';
+            }
+        });
+        xmlX += '</Table></Worksheet>';
+
+        xmlX += '</Workbook>';
+        var blobX = new Blob([xmlX], {type:'application/vnd.ms-excel'});
+        var aX = document.createElement('a');
+        aX.href = URL.createObjectURL(blobX);
+        aX.download = 'Verificacion_Forward_'+POSICION+'_2026.xls';
+        aX.click();
+
+        console.log('=== Export Forward '+POSICION_LABEL+' ===');
+        console.log('Ops: '+ops.length+' | Días con op: '+rows.filter(function(r){return r.volumen>0;}).length);
+        console.log('Vol: '+totVol.toLocaleString('de-DE')+' tn | Precio prom pond: U$D '+totPrecPromUSD);
+    }
+
     </script>
 </body>
 </html>
