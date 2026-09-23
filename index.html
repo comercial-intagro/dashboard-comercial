@@ -6464,6 +6464,143 @@ ${totalsRow}
     }
 
 
+    // ================================================================
+    // EXPORT: Disponible a precio — volumen diario + precio ponderado vs pizarra
+    // Ejecutar desde F12: exportDisponibleDiario()
+    // ================================================================
+    function exportDisponibleDiario(){
+        if(!DB_FULL || !DB_FULL.length){ alert('Esperá a que cargue el dashboard'); return; }
+
+        var ARGC = '30711629048';
+        var pizMap = {};
+        PIZARRA_SOJA_2026.forEach(function(p){ pizMap[p[0]] = { ars:p[1], tc:p[2], usd:p[3] }; });
+        function pizarraDelDia(ymd){
+            if (pizMap[ymd]) return pizMap[ymd];
+            var d = new Date(ymd+'T12:00:00');
+            for (var i=1;i<=5;i++){ d.setDate(d.getDate()-1); var k=d.toISOString().slice(0,10); if(pizMap[k]) return pizMap[k]; }
+            return null;
+        }
+        function ymdFmt(dObj){ return dObj.getFullYear()+'-'+('0'+(dObj.getMonth()+1)).slice(-2)+'-'+('0'+dObj.getDate()).slice(-2); }
+        function parseFechaLocal(s){
+            if (!s) return null; s=s.toString().trim(); var parts;
+            if (s.includes('-')) parts=s.split('-'); else if (s.includes('/')) parts=s.split('/'); else return null;
+            if (parts.length===3){ var d=parseInt(parts[0]),m=parseInt(parts[1])-1,y=parseInt(parts[2]); if(y<100)y+=2000; if(!isNaN(d)&&!isNaN(m)&&!isNaN(y)) return new Date(y,m,d); }
+            return null;
+        }
+
+        // Filtrar: soja, zona rosario, argentrading comprador, mar-ago 2026, disponible, a precio
+        var ops = DB_FULL.filter(function(d){
+            if (d.cat!=='SOJA' || !d.dObj) return false;
+            var y=d.dObj.getFullYear(), m=d.dObj.getMonth()+1;
+            if (y!==2026 || m<3 || m>8) return false;
+            if (zonaDeDestino(d.destino)!=='ZONA ROSARIO TOTAL') return false;
+            var cc=String(d.cuitComp||'').replace(/\D/g,'');
+            if (cc!==ARGC) return false;
+            // Disponible: inicio entrega en el mismo mes que concertación
+            var ie = parseFechaLocal(d.inicioEntrega);
+            if (!ie || ie.getFullYear()!==d.dObj.getFullYear() || ie.getMonth()!==d.dObj.getMonth()) return false;
+            // A precio (no a fijar)
+            var p = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            if (!p || p<=0) return false;
+            return true;
+        });
+
+        if (!ops.length){ alert('No hay operaciones disponible a precio en el filtro'); return; }
+
+        // Agrupar por día
+        var diasMap = {};
+        ops.forEach(function(d){
+            var fecha = ymdFmt(d.dObj);
+            if (!diasMap[fecha]) diasMap[fecha] = { vol:0, sumPxV:0, ops:0 };
+            var s = diasMap[fecha];
+            var precio = parseFloat((d.precio||'').toString().replace(/\./g,'').replace(',','.'));
+            var mon = (d.moneda||'').toUpperCase();
+            var precioUSD = 0;
+            if (mon.indexOf('USD')!==-1 || mon.indexOf('DOL')!==-1 || mon.indexOf('U$')!==-1) precioUSD = precio;
+            else { var piz = pizarraDelDia(fecha); if (piz && piz.tc>0) precioUSD = precio / piz.tc; }
+            s.vol += d.vol;
+            s.sumPxV += precioUSD * d.vol;
+            s.ops++;
+        });
+
+        // Armar array ordenado por fecha, incluyendo todos los días hábiles de pizarra
+        // para que el gráfico no tenga huecos en días sin operación
+        var allDates = PIZARRA_SOJA_2026
+            .map(function(p){ return p[0]; })
+            .filter(function(f){ return f>='2026-03-01' && f<='2026-08-31'; })
+            .sort();
+
+        var rows = allDates.map(function(fecha){
+            var dia = diasMap[fecha];
+            var piz = pizarraDelDia(fecha);
+            return {
+                fecha: fecha,
+                volumen: dia ? Math.round(dia.vol) : 0,
+                ops: dia ? dia.ops : 0,
+                precioPond: (dia && dia.vol>0) ? Math.round(dia.sumPxV/dia.vol*100)/100 : '',
+                pizarraUSD: piz ? piz.usd : '',
+                pizarraARS: piz ? piz.ars : '',
+                tc: piz ? piz.tc : ''
+            };
+        });
+
+        // Generar Excel
+        var xml = '<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
+        xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+        xml += '<Styles>';
+        xml += '<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#005C35" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center"/></Style>';
+        xml += '<Style ss:ID="num"><NumberFormat ss:Format="#,##0"/></Style>';
+        xml += '<Style ss:ID="dec"><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xml += '<Style ss:ID="def"><Font ss:FontName="Arial" ss:Size="10"/></Style>';
+        xml += '<Style ss:ID="tot"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
+        xml += '<Style ss:ID="totd"><Font ss:Bold="1" ss:Color="#005C35" ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0.00"/></Style>';
+        xml += '<Style ss:ID="volbar"><Font ss:FontName="Arial" ss:Size="10"/><Interior ss:Color="#DCFCE7" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>';
+        xml += '</Styles>';
+
+        function esc(v){ return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function sCell(v,st){ return '<Cell ss:StyleID="'+(st||'def')+'"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
+        function nCell(v,st){ return '<Cell ss:StyleID="'+(st||'num')+'"><Data ss:Type="Number">'+(v||0)+'</Data></Cell>'; }
+        function hCell(v){ return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
+
+        // Hoja: Data para Gráfico
+        xml += '<Worksheet ss:Name="Disponible Diario"><Table>';
+        xml += '<Row>'+['Fecha','Volumen Tn','Ops','Precio Ponderado USD','Pizarra USD','Delta USD','Pizarra ARS','TC'].map(hCell).join('')+'</Row>';
+
+        var totVol=0, totOps=0, totSumPxV=0, totVolConPrecio=0;
+        rows.forEach(function(r){
+            var delta = (r.precioPond!=='' && r.pizarraUSD!=='') ? Math.round((r.precioPond-r.pizarraUSD)*100)/100 : '';
+            xml += '<Row>'+sCell(r.fecha)+
+                (r.volumen>0 ? nCell(r.volumen,'volbar') : nCell(0))+
+                nCell(r.ops)+
+                (r.precioPond!=='' ? nCell(r.precioPond,'dec') : sCell('-'))+
+                (r.pizarraUSD!=='' ? nCell(r.pizarraUSD,'dec') : sCell('-'))+
+                (delta!=='' ? nCell(delta,'dec') : sCell('-'))+
+                (r.pizarraARS!=='' ? nCell(r.pizarraARS) : sCell('-'))+
+                (r.tc!=='' ? nCell(r.tc,'dec') : sCell('-'))+'</Row>';
+            totVol += r.volumen;
+            totOps += r.ops;
+            if (r.precioPond!=='' && r.volumen>0){ totSumPxV += r.precioPond*r.volumen; totVolConPrecio += r.volumen; }
+        });
+
+        var totPrecProm = totVolConPrecio>0 ? Math.round(totSumPxV/totVolConPrecio*100)/100 : 0;
+        xml += '<Row>'+sCell('TOTAL','tot')+nCell(totVol,'tot')+nCell(totOps,'tot')+nCell(totPrecProm,'totd')+sCell('','tot')+sCell('','tot')+sCell('','tot')+sCell('','tot')+'</Row>';
+        xml += '</Table></Worksheet>';
+
+        xml += '</Workbook>';
+
+        var blob = new Blob([xml], {type:'application/vnd.ms-excel'});
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Disponible_Diario_Argentrading_2026.xls';
+        a.click();
+
+        var diasConOps = rows.filter(function(r){return r.volumen>0;}).length;
+        console.log('=== Export Disponible Diario ===');
+        console.log('Días con operación: '+diasConOps+' de '+allDates.length+' hábiles');
+        console.log('Vol total: '+totVol.toLocaleString('de-DE')+' tn | Ops: '+totOps);
+        console.log('Precio ponderado promedio: '+totPrecProm+' USD/tn');
+    }
+
     </script>
 </body>
 </html>
