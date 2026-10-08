@@ -1850,6 +1850,7 @@
                             rowObj[headers[i]]=cell?(cell.f!==undefined?cell.f:cell.v):"";
                             // Columna AO (índice 40) = Observaciones (sin título en el Sheet)
                             if(i===40) rowObj['__OBSERVACIONES']=cell?(cell.f!==undefined?cell.f:cell.v):"";
+                            if(i===46) rowObj['__PROV_PROCEDENCIA']=cell?(cell.f!==undefined?cell.f:cell.v):"";
                         });
                     }
                     return rowObj;
@@ -2170,7 +2171,7 @@
             const colFinEntrega=findExact('FECHA FIN ENTREGA')||findKey('FIN ENTREGA')||findKey('FIN ENT')||'Fecha fin entrega';
             const colObservaciones='__OBSERVACIONES'; // columna AO del Sheet (sin título)
             const colProcedencia=findExact('PROCEDENCIA')||findKey('PROCEDENCIA')||'Procedencia';
-            const colProvProcedencia=findExact('PROVINCIA PROCEDENCIA')||findKey('PROVINCIA PROCED')||'Provincia Procedencia';
+            const colProvProcedencia='__PROV_PROCEDENCIA'; // columna AU (índice 46) sin título en el Sheet
 
             let latestDate=new Date(2020,0,1);
             
