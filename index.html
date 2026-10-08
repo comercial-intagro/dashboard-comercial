@@ -2169,6 +2169,8 @@
             const colInicioEntrega=findExact('INICIO ENTREGA')||findKey('INICIO ENTREGA')||findKey('INICIO ENT')||'Inicio entrega';
             const colFinEntrega=findExact('FECHA FIN ENTREGA')||findKey('FIN ENTREGA')||findKey('FIN ENT')||'Fecha fin entrega';
             const colObservaciones='__OBSERVACIONES'; // columna AO del Sheet (sin título)
+            const colProcedencia=findExact('PROCEDENCIA')||findKey('PROCEDENCIA')||'Procedencia';
+            const colProvProcedencia=findExact('PROVINCIA PROCEDENCIA')||findKey('PROVINCIA PROCED')||'Provincia Procedencia';
 
             let latestDate=new Date(2020,0,1);
             
@@ -2244,6 +2246,8 @@
                     inicioEntrega:(row[colInicioEntrega]||'').toString().trim(),
                     finEntrega:(row[colFinEntrega]||'').toString().trim(),
                     observaciones:(row[colObservaciones]||'').toString().trim(),
+                    procedencia:(row[colProcedencia]||'').toString().trim(),
+                    provProcedencia:(row[colProvProcedencia]||'').toString().trim(),
                     argVend: esArgVendedor
                 });
                 return acc;
@@ -6985,6 +6989,113 @@ ${totalsRow}
         console.log('=== Export Forward '+POSICION_LABEL+' ===');
         console.log('Ops: '+ops.length+' | Días con op: '+rows.filter(function(r){return r.volumen>0;}).length);
         console.log('Vol: '+totVol.toLocaleString('de-DE')+' tn | Precio prom pond: U$D '+totPrecPromUSD);
+    }
+
+    // ============================================================
+    // MAPA DE CALOR — Exportar CSV por producto para Google My Maps
+    // Uso desde F12: exportMapaCalor()
+    // Genera un CSV por producto (TODOS, SOJA, MAIZ, TRIGO, GIRASOL, SORGO, CEBADA)
+    // con columnas: Localidad, Provincia, Volumen_TN, Operaciones
+    // Google My Maps geocodifica automáticamente por "Localidad, Provincia, Argentina"
+    // ============================================================
+    function exportMapaCalor(productoFiltro) {
+        var src = (typeof DB_FULL !== 'undefined' && DB_FULL.length) ? DB_FULL : DB;
+        var fechaDesde = new Date(2026, 2, 31); // 31/3/2026
+
+        // Filtrar operaciones desde 31/3/2026 con procedencia
+        var ops = src.filter(function(d) {
+            if (!d.dObj || d.dObj < fechaDesde) return false;
+            if (!d.procedencia || d.procedencia === '') return false;
+            return true;
+        });
+
+        console.log('[MapaCalor] Operaciones con procedencia desde 31/3/2026: ' + ops.length);
+
+        // Productos disponibles
+        var productos = ['TODOS', 'SOJA', 'MAIZ', 'TRIGO', 'GIRASOL', 'SORGO', 'CEBADA'];
+
+        // Si se pasó un filtro específico, solo ese
+        if (productoFiltro && productoFiltro !== 'TODOS') {
+            productoFiltro = productoFiltro.toUpperCase();
+            if (productos.indexOf(productoFiltro) === -1) {
+                console.error('Producto no válido. Opciones: ' + productos.join(', '));
+                return;
+            }
+            productos = [productoFiltro];
+        }
+
+        productos.forEach(function(prod) {
+            var filtradas = (prod === 'TODOS') ? ops : ops.filter(function(d) { return d.cat === prod; });
+            if (filtradas.length === 0) {
+                console.warn('[MapaCalor] Sin operaciones para ' + prod);
+                return;
+            }
+
+            // Agrupar por localidad
+            var agrupado = {};
+            filtradas.forEach(function(d) {
+                // Normalizar localidad: quitar acentos, mayúsculas
+                var loc = d.procedencia.toUpperCase().trim()
+                    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+                // Provincia: usar la del registro, o inferir
+                var prov = (d.provProcedencia || '').trim();
+                if (!prov) prov = 'Sin dato';
+
+                var key = loc + '|' + prov.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                if (!agrupado[key]) {
+                    agrupado[key] = {
+                        localidad: d.procedencia.trim(), // mantener el nombre original con formato
+                        provincia: prov,
+                        volumen: 0,
+                        operaciones: 0
+                    };
+                }
+                agrupado[key].volumen += d.vol;
+                agrupado[key].operaciones += 1;
+            });
+
+            // Ordenar por volumen descendente
+            var filas = Object.values(agrupado).sort(function(a, b) { return b.volumen - a.volumen; });
+
+            // Generar CSV
+            var csv = 'Localidad,Provincia,Ubicacion,Producto,Volumen_TN,Operaciones\n';
+            filas.forEach(function(f) {
+                var ubicacion = f.localidad + ', ' + f.provincia + ', Argentina';
+                csv += '"' + f.localidad.replace(/"/g, '""') + '","'
+                    + f.provincia.replace(/"/g, '""') + '","'
+                    + ubicacion.replace(/"/g, '""') + '","'
+                    + prod + '",'
+                    + Math.round(f.volumen) + ','
+                    + f.operaciones + '\n';
+            });
+
+            // Descargar
+            var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'mapa_calor_' + prod.toLowerCase() + '_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            var totalVol = filas.reduce(function(s, f) { return s + f.volumen; }, 0);
+            console.log('[MapaCalor] ' + prod + ': ' + filas.length + ' localidades | '
+                + Math.round(totalVol).toLocaleString('de-DE') + ' tn | '
+                + filtradas.length + ' operaciones → CSV descargado');
+        });
+    }
+
+    // Versión rápida: descarga TODOS los productos en CSVs separados de una vez
+    function exportMapaCalorTodos() {
+        exportMapaCalor('TODOS');
+        setTimeout(function(){ exportMapaCalor('SOJA'); }, 300);
+        setTimeout(function(){ exportMapaCalor('MAIZ'); }, 600);
+        setTimeout(function(){ exportMapaCalor('TRIGO'); }, 900);
+        setTimeout(function(){ exportMapaCalor('GIRASOL'); }, 1200);
+        setTimeout(function(){ exportMapaCalor('SORGO'); }, 1500);
+        setTimeout(function(){ exportMapaCalor('CEBADA'); }, 1800);
     }
 
     </script>
