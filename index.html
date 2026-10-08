@@ -7080,6 +7080,192 @@ ${totalsRow}
         });
     }
 
+    // ============================================================
+    // MAPA DE CALOR HTML — Leaflet + leaflet-heat
+    // Uso desde F12: exportMapaCalorHTML()
+    // Genera un HTML autónomo con mapa de calor real (gradientes)
+    // Geocodifica localidades con Nominatim + caché localStorage
+    // ============================================================
+    function exportMapaCalorHTML() {
+        var src = (typeof DB_FULL !== 'undefined' && DB_FULL.length) ? DB_FULL : DB;
+        var fechaDesde = new Date(2026, 2, 31);
+
+        var ops = src.filter(function(d) {
+            if (!d.dObj || d.dObj < fechaDesde) return false;
+            if (!d.procedencia || d.procedencia === '') return false;
+            return true;
+        });
+        console.log('[MapaCalorHTML] Operaciones: ' + ops.length);
+        if (!ops.length) { console.error('Sin operaciones con procedencia.'); return; }
+
+        // Agrupar por localidad+provincia+producto
+        var agrupado = {};
+        var locsUnicas = {};
+        ops.forEach(function(d) {
+            var loc = d.procedencia.trim();
+            var locNorm = loc.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+            var prov = (d.provProcedencia || '').trim();
+            if (!prov) prov = '';
+            var provNorm = prov.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+            var prod = d.cat || 'VARIOS';
+            var key = locNorm + '|' + provNorm + '|' + prod;
+            if (!agrupado[key]) {
+                agrupado[key] = { localidad: loc, provincia: prov, producto: prod, volumen: 0, operaciones: 0 };
+            }
+            agrupado[key].volumen += d.vol;
+            agrupado[key].operaciones += 1;
+            var locKey = locNorm + '|' + provNorm;
+            if (!locsUnicas[locKey]) locsUnicas[locKey] = { localidad: loc, provincia: prov };
+        });
+
+        var dataJSON = JSON.stringify(Object.values(agrupado));
+        var locsJSON = JSON.stringify(Object.values(locsUnicas));
+
+        var html = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Mapa de Calor Intagro</title>\n'
+        + '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>\n'
+        + '<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>\n'
+        + '<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"><\/script>\n'
+        + '<style>\n'
+        + '*{margin:0;padding:0;box-sizing:border-box}\n'
+        + 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#1a1a2e}\n'
+        + '#map{width:100vw;height:100vh}\n'
+        + '#controls{position:absolute;top:12px;left:60px;z-index:1000;display:flex;gap:6px;flex-wrap:wrap}\n'
+        + '#controls button{padding:7px 14px;border:none;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;'
+        + 'background:rgba(255,255,255,0.92);color:#333;box-shadow:0 2px 6px rgba(0,0,0,0.25);transition:all .2s}\n'
+        + '#controls button:hover{background:#fff;transform:translateY(-1px)}\n'
+        + '#controls button.active{background:#2563eb;color:#fff}\n'
+        + '#status{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:1000;'
+        + 'background:rgba(0,0,0,0.8);color:#fff;padding:10px 24px;border-radius:24px;font-size:13px;'
+        + 'display:flex;align-items:center;gap:10px;box-shadow:0 4px 12px rgba(0,0,0,0.3)}\n'
+        + '#status .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);'
+        + 'border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}\n'
+        + '@keyframes spin{to{transform:rotate(360deg)}}\n'
+        + '#progress-bar{width:200px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden}\n'
+        + '#progress-fill{height:100%;background:#22c55e;transition:width .3s}\n'
+        + '#legend{position:absolute;bottom:20px;right:12px;z-index:1000;background:rgba(255,255,255,0.95);'
+        + 'padding:12px 16px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:12px}\n'
+        + '#legend h4{margin:0 0 6px;font-size:13px;color:#333}\n'
+        + '.leg-row{display:flex;align-items:center;gap:6px;margin:3px 0}\n'
+        + '.leg-color{width:24px;height:10px;border-radius:3px}\n'
+        + '#info-box{position:absolute;top:12px;right:12px;z-index:1000;background:rgba(255,255,255,0.95);'
+        + 'padding:12px 16px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:13px;min-width:180px}\n'
+        + '#info-box h3{margin:0 0 4px;font-size:15px;color:#1e293b}\n'
+        + '#info-box .stat{color:#64748b;margin:2px 0}\n'
+        + '</style>\n</head>\n<body>\n'
+        + '<div id="map"></div>\n'
+        + '<div id="controls">\n'
+        + '  <button class="active" data-prod="TODOS">Todos</button>\n'
+        + '  <button data-prod="SOJA">Soja</button>\n'
+        + '  <button data-prod="MAIZ">Maíz</button>\n'
+        + '  <button data-prod="TRIGO">Trigo</button>\n'
+        + '  <button data-prod="GIRASOL">Girasol</button>\n'
+        + '  <button data-prod="SORGO">Sorgo</button>\n'
+        + '  <button data-prod="CEBADA">Cebada</button>\n'
+        + '</div>\n'
+        + '<div id="info-box"><h3>Intagro — Mapa de Calor</h3>'
+        + '<div class="stat" id="info-prod">Producto: Todos</div>'
+        + '<div class="stat" id="info-locs">Localidades: —</div>'
+        + '<div class="stat" id="info-vol">Volumen: —</div>'
+        + '<div class="stat" id="info-ops">Operaciones: —</div></div>\n'
+        + '<div id="status" style="display:none"><div class="spinner"></div>'
+        + '<span id="status-text">Geocodificando...</span>'
+        + '<div id="progress-bar"><div id="progress-fill" style="width:0%"></div></div></div>\n'
+        + '<div id="legend"><h4>Intensidad</h4>'
+        + '<div class="leg-row"><div class="leg-color" style="background:linear-gradient(90deg,#0000ff,#00ffff,#00ff00,#ffff00,#ff0000)"></div></div>'
+        + '<div class="leg-row" style="justify-content:space-between;width:100%"><span>Bajo</span><span>Alto</span></div></div>\n'
+        + '<script>\n'
+        + 'var DATA=' + dataJSON + ';\n'
+        + 'var LOCS=' + locsJSON + ';\n'
+        + 'var GEOCACHE_KEY="intagro_geo_v1";\n'
+        + 'var map=L.map("map",{zoomControl:true}).setView([-33.5,-62],6);\n'
+        + 'L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{'
+        + 'attribution:"&copy; OSM &copy; CARTO",maxZoom:18}).addTo(map);\n'
+        + 'var heatLayer=null;\nvar currentProd="TODOS";\nvar geoCoords={};\n\n'
+        + 'function loadCache(){try{var c=localStorage.getItem(GEOCACHE_KEY);return c?JSON.parse(c):{};}catch(e){return {};}}\n'
+        + 'function saveCache(c){try{localStorage.setItem(GEOCACHE_KEY,JSON.stringify(c));}catch(e){}}\n\n'
+        + 'function norm(s){return s.toUpperCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").trim();}\n\n'
+        + 'function updateHeat(){\n'
+        + '  var pts=[];var totVol=0;var totOps=0;var locsSet=new Set();\n'
+        + '  DATA.forEach(function(d){\n'
+        + '    if(currentProd!=="TODOS"&&d.producto!==currentProd)return;\n'
+        + '    var key=norm(d.localidad)+"|"+norm(d.provincia);\n'
+        + '    var coord=geoCoords[key];\n'
+        + '    if(!coord)return;\n'
+        + '    pts.push([coord[0],coord[1],d.volumen]);\n'
+        + '    totVol+=d.volumen;totOps+=d.operaciones;locsSet.add(key);\n'
+        + '  });\n'
+        + '  if(heatLayer)map.removeLayer(heatLayer);\n'
+        + '  if(pts.length){\n'
+        + '    heatLayer=L.heatLayer(pts,{radius:28,blur:20,maxZoom:10,max:Math.max.apply(null,pts.map(function(p){return p[2]}))*0.6,'
+        + 'gradient:{0.1:"blue",0.3:"cyan",0.5:"lime",0.7:"yellow",1:"red"}}).addTo(map);\n'
+        + '  }\n'
+        + '  var prodName=currentProd==="TODOS"?"Todos":currentProd.charAt(0)+currentProd.slice(1).toLowerCase();\n'
+        + '  document.getElementById("info-prod").textContent="Producto: "+prodName;\n'
+        + '  document.getElementById("info-locs").textContent="Localidades: "+locsSet.size;\n'
+        + '  document.getElementById("info-vol").textContent="Volumen: "+Math.round(totVol).toLocaleString("de-DE")+" tn";\n'
+        + '  document.getElementById("info-ops").textContent="Operaciones: "+totOps.toLocaleString("de-DE");\n'
+        + '}\n\n'
+        + 'document.getElementById("controls").addEventListener("click",function(e){\n'
+        + '  if(e.target.tagName!=="BUTTON")return;\n'
+        + '  document.querySelectorAll("#controls button").forEach(function(b){b.classList.remove("active")});\n'
+        + '  e.target.classList.add("active");\n'
+        + '  currentProd=e.target.getAttribute("data-prod");\n'
+        + '  updateHeat();\n'
+        + '});\n\n'
+        + 'async function geocodeAll(){\n'
+        + '  var cache=loadCache();\n'
+        + '  var toGeo=[];\n'
+        + '  LOCS.forEach(function(l){\n'
+        + '    var key=norm(l.localidad)+"|"+norm(l.provincia);\n'
+        + '    if(cache[key]){geoCoords[key]=cache[key];}\n'
+        + '    else{toGeo.push({key:key,loc:l.localidad,prov:l.provincia});}\n'
+        + '  });\n'
+        + '  if(Object.keys(geoCoords).length>0)updateHeat();\n'
+        + '  if(!toGeo.length){document.getElementById("status").style.display="none";return;}\n'
+        + '  var statusEl=document.getElementById("status");statusEl.style.display="flex";\n'
+        + '  var statusTxt=document.getElementById("status-text");\n'
+        + '  var progFill=document.getElementById("progress-fill");\n'
+        + '  var total=toGeo.length;var done=0;var errors=0;\n'
+        + '  for(var i=0;i<toGeo.length;i++){\n'
+        + '    var item=toGeo[i];\n'
+        + '    var q=item.loc+(item.prov?", "+item.prov:"")+", Argentina";\n'
+        + '    statusTxt.textContent="Geocodificando "+done+"/"+total+" — "+item.loc;\n'
+        + '    progFill.style.width=Math.round(done/total*100)+"%";\n'
+        + '    try{\n'
+        + '      var resp=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar&q="+encodeURIComponent(q),\n'
+        + '        {headers:{"Accept-Language":"es"}});\n'
+        + '      var data=await resp.json();\n'
+        + '      if(data&&data.length>0){\n'
+        + '        var coord=[parseFloat(data[0].lat),parseFloat(data[0].lon)];\n'
+        + '        geoCoords[item.key]=coord;\n'
+        + '        cache[item.key]=coord;\n'
+        + '      } else { errors++; }\n'
+        + '    }catch(e){errors++;}\n'
+        + '    done++;\n'
+        + '    if(done%10===0){saveCache(cache);updateHeat();}\n'
+        + '    if(i<toGeo.length-1)await new Promise(function(r){setTimeout(r,1100);});\n'
+        + '  }\n'
+        + '  saveCache(cache);\n'
+        + '  updateHeat();\n'
+        + '  statusTxt.textContent="Listo — "+(total-errors)+" geocodificadas"+(errors?" ("+errors+" sin ubicar)":"");\n'
+        + '  progFill.style.width="100%";\n'
+        + '  setTimeout(function(){statusEl.style.display="none";},4000);\n'
+        + '}\n'
+        + 'geocodeAll();\n'
+        + '<\/script>\n</body>\n</html>';
+
+        var blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'mapa_calor_intagro_' + new Date().toISOString().slice(0, 10) + '.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log('[MapaCalorHTML] HTML descargado — abrilo en el navegador');
+    }
+
     </script>
 </body>
 </html>
