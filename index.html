@@ -6999,7 +6999,7 @@ ${totalsRow}
     // En My Maps: importar → "Agrupar por Producto" → capas automáticas
     // ============================================================
     function exportMapaCalor() {
-        var src = (typeof DB_FULL !== 'undefined' && DB_FULL.length) ? DB_FULL : DB;
+        var src = DB; // criterio vista vendedora: Argentrading comprador + no-Argentrading, excluye Argentrading vendedor
         var fechaDesde = new Date(2026, 2, 31); // 31/3/2026
 
         var ops = src.filter(function(d) {
@@ -8272,7 +8272,7 @@ ${totalsRow}
     // ===== PRECACHED_INTAGRO_END =====
 
     function exportMapaCalorHTML() {
-        var src = (typeof DB_FULL !== 'undefined' && DB_FULL.length) ? DB_FULL : DB;
+        var src = DB; // criterio vista vendedora: Argentrading comprador + no-Argentrading, excluye Argentrading vendedor
         var fechaDesde = new Date(2026, 2, 31);
 
         var ops = src.filter(function(d) {
