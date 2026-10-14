@@ -213,19 +213,36 @@
                 updatePresu27Kpis(repre,real26);
             }).catch(function(){});
         }
+        // Guardado serializado: una cola que manda de a UN request por vez.
+        // Evita la condición de carrera (título en fila 2) y los ⚠ por saturar el backend.
+        var p27Queue=[]; var p27Working=false;
         function p27QueueSave(repre, el){
             var key=el.getAttribute('data-key');
             var st=el.parentNode.querySelector('.p27-stat'); if(st){st.textContent='…';st.className='p27-stat saving';}
             var id=repre+'|'+key;
             if(p27SaveTimers[id]) clearTimeout(p27SaveTimers[id]);
-            p27SaveTimers[id]=setTimeout(function(){ p27SaveCell(repre, el); }, 700);
+            p27SaveTimers[id]=setTimeout(function(){ p27Enqueue(repre, el); }, 500);
+        }
+        function p27Enqueue(repre, el){
+            var key=el.getAttribute('data-key');
+            // si ya había un trabajo pendiente para la misma celda, queda el último valor
+            p27Queue=p27Queue.filter(function(j){ return !(j.repre===repre && j.key===key); });
+            p27Queue.push({repre:repre, el:el, key:key});
+            p27Drain();
+        }
+        function p27Drain(){
+            if(p27Working) return;
+            var job=p27Queue.shift();
+            if(!job) return;
+            p27Working=true;
+            p27SaveCell(job.repre, job.el).then(function(){ p27Working=false; p27Drain(); });
         }
         function p27SaveCell(repre, el){
             var st=el.parentNode.querySelector('.p27-stat');
             var tnRaw=el.value.trim();
             var params={action:'presu2027_save',key:el.getAttribute('data-key'),cuit:el.getAttribute('data-cuit')||'',
                 nombre:decodeURIComponent(el.getAttribute('data-nombre')||''),repre:repre,tn:(tnRaw===''?'':(parseFloat(tnRaw)||0))};
-            p27Jsonp(params).then(function(resp){
+            return p27Jsonp(params).then(function(resp){
                 if(resp&&resp.ok){ if(st){st.textContent='✓';st.className='p27-stat ok';} }
                 else { if(st){st.textContent='⚠';st.className='p27-stat err';st.title=(resp&&resp.error)||'No se pudo guardar';} }
             }).catch(function(){ if(st){st.textContent='⚠';st.className='p27-stat err';st.title='Sin conexión';} });
