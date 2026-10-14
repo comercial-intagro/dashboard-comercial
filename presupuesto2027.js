@@ -24,10 +24,20 @@
         #p27AvanceTable th.col-name { text-align:left; }
         #presu27Table .col-2027, #presu27Table td.c27 { background:#f0fdf4; }
         #presu27Table thead .col-2027 { color:var(--primary); }
+        /* Bandas por ejercicio (de más viejo a más nuevo) */
+        #presu27Table th.y24, #presu27Table td.y24 { background:#fafafa; }
+        #presu27Table th.y25, #presu27Table td.y25 { background:#f1f3f5; }
+        #presu27Table th.e26, #presu27Table td.e26 { background:#eef5ff; }
+        #presu27Table th.e26grp { background:#eef5ff; color:#1d4ed8; }
+        #presu27Table th.e26tot, #presu27Table td.e26tot { background:#dbe8fe; font-weight:800; color:#0f2a6b; border-left:2px solid #bfd3fb; }
+        #presu27Table thead th.e26tot { color:#1d4ed8; }
+        /* Columna indicador % 27 vs 26 */
+        #presu27Table td.vsind, #presu27Table th.vsind { text-align:right; font-variant-numeric:tabular-nums; }
         #presu27Table tfoot td { font-weight:800; border-top:2px solid #e2e8f0; background:#f8fafc; color:#0f172a; text-align:right; font-variant-numeric:tabular-nums; position:sticky; bottom:0; }
         #presu27Table tfoot td.col-name { text-align:left; }
         #presu27Table tfoot td.c27 { background:#dcfce7; color:var(--primary); }
-        .presu27-input { width:94px; text-align:right; border:1px solid #cbd5e1; border-radius:6px; padding:5px 7px; font-size:0.72rem; font-family:inherit; font-weight:700; color:#0f172a; background:#fff; }
+        #presu27Table tfoot td.e26tot { background:#cfe0fd; color:#0f2a6b; }
+        .presu27-input { width:104px; text-align:right; border:1px solid #cbd5e1; border-radius:6px; padding:5px 7px; font-size:0.72rem; font-family:inherit; font-weight:700; color:#0f172a; background:#fff; }
         .presu27-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px rgba(16,185,129,0.18); }
         .presu27-input:disabled { background:#f1f5f9; color:#64748b; }
         .p27-stat { display:inline-block; margin-left:6px; width:12px; font-size:0.72rem; font-weight:800; vertical-align:middle; }
@@ -112,17 +122,19 @@
                         </div>
                     </div>
                 </div>
+                <div id="p27DeadlineBar" style="display:none;padding:2px 2px 10px;font-size:0.72rem;font-weight:600;"></div>
                 <div class="modal-table-container">
                     <table class="budget-table" id="presu27Table">
                         <thead>
                             <tr>
                                 <th rowspan="2" class="col-name">Cliente</th>
-                                <th rowspan="2" class="num">2024</th>
-                                <th rowspan="2" class="num">2025</th>
-                                <th colspan="5" style="text-align:center;">Ejercicio 2026 (tn)</th>
+                                <th rowspan="2" class="num y24">2024</th>
+                                <th rowspan="2" class="num y25">2025</th>
+                                <th colspan="5" class="e26grp" style="text-align:center;">Ejercicio 2026 (tn)</th>
                                 <th rowspan="2" class="col-2027 num">Presupuesto 2027</th>
+                                <th rowspan="2" class="vsind" title="Presupuesto 2027 vs Total 2026">vs 2026</th>
                             </tr>
-                            <tr><th class="num">Soja</th><th class="num">Maíz</th><th class="num">Trigo</th><th class="num">Otros</th><th class="num">Total</th></tr>
+                            <tr><th class="num e26">Soja</th><th class="num e26">Maíz</th><th class="num e26">Trigo</th><th class="num e26">Otros</th><th class="num e26tot">Total</th></tr>
                         </thead>
                         <tbody id="presu27Body"></tbody>
                         <tfoot id="presu27Foot"></tfoot>
@@ -139,6 +151,24 @@
   // ============================================================
   var presu27Draft = {};        // {repre: {clientKey: tn}}
   var presu27Confirmado = {};   // {repre: bool}
+  var p27LockDate = '';         // fecha de cierre "YYYY-MM-DD" (la define el backend)
+  var p27Locked = false;        // true si ya pasó la fecha de cierre (hora Argentina, según backend)
+
+  function p27FmtFecha(iso){ if(!iso)return''; var p=String(iso).split('-'); return (p.length===3)?(p[2]+'/'+p[1]+'/'+p[0]):iso; }
+  function p27UpdateDeadline(){
+      var el=document.getElementById('p27DeadlineBar'); if(!el)return;
+      if(!p27LockDate){ el.style.display='none'; return; }
+      el.style.display='block';
+      if(p27Locked) el.innerHTML='<span style="color:#b91c1c;font-weight:800;">🔒 Carga cerrada el '+p27FmtFecha(p27LockDate)+' — sólo lectura</span>';
+      else el.innerHTML='<span style="color:#64748b;">📅 Cierre de carga: <b style="color:#0f172a;">'+p27FmtFecha(p27LockDate)+'</b> — podés editar hasta ese día inclusive.</span>';
+  }
+  function p27ApplyLockUI(){
+      if(p27Locked && !esGerencial()){
+          var ins=document.querySelectorAll('.presu27-input');
+          for(var i=0;i<ins.length;i++) ins[i].disabled=true;
+      }
+      p27UpdateDeadline();
+  }
 
   function esGerencial(){ return USER_ROL === 'GERENCIAL'; }
   function listaRepres(){ return budgetData.filter(function(b){return !b.reserva;}).map(function(b){return b.r;}).sort(function(a,b){return a.localeCompare(b,'es');}); }
@@ -185,6 +215,25 @@
   function p27fmt(n){return n>0?Math.round(n).toLocaleString('de-DE'):'-';}
   function p27sumDraft(repre){var d=presu27Draft[repre]||{};var s=0;Object.keys(d).forEach(function(k){var v=parseFloat(d[k]);if(!isNaN(v))s+=v;});return s;}
 
+  // Entrada con punto de miles: el input es texto; el valor real se guarda limpio.
+  function p27ParseInput(str){ var dg=String(str==null?'':str).replace(/\D/g,''); return dg===''?'':parseInt(dg,10); }
+  function p27InputDisplay(n){ var v=parseFloat(n); return (isNaN(v)||v==='')?'':Math.round(v).toLocaleString('de-DE'); }
+  function p27FmtMiles(el){
+      var before=el.value.slice(0, el.selectionStart!=null?el.selectionStart:el.value.length).replace(/\D/g,'').length;
+      var dg=el.value.replace(/\D/g,'').replace(/^0+(?=\d)/,'');
+      var formatted=dg?parseInt(dg,10).toLocaleString('de-DE'):'';
+      el.value=formatted;
+      var pos=0,seen=0; while(pos<formatted.length && seen<before){ if(/\d/.test(formatted.charAt(pos)))seen++; pos++; }
+      try{ el.setSelectionRange(pos,pos); }catch(e){}
+  }
+  // Indicador % del presupuesto 2027 vs el Total del ejercicio 2026 (por cliente).
+  function p27Indicador(val,tot26){
+      if(!(val>0) || !(tot26>0)) return '<span style="color:#cbd5e1;">—</span>';
+      var g=(val/tot26-1)*100;
+      var col=g>1?'#16a34a':(g<-1?'#dc2626':'#64748b');
+      return '<span style="color:'+col+';font-weight:700;">'+(g>=0?'+':'')+g.toFixed(0)+'%</span>';
+  }
+
   function openPresu2027(){
       var sel=document.getElementById('presu27Rep');
       var ger=esGerencial();
@@ -222,43 +271,54 @@
       var repre=document.getElementById('presu27Rep').value||'';
       var body=document.getElementById('presu27Body');
       var foot=document.getElementById('presu27Foot');
-      if(!repre){ body.innerHTML='<tr><td colspan="9" style="text-align:center;padding:18px;color:#94a3b8;font-weight:600;">Sin representante asignado.</td></tr>'; foot.innerHTML=''; updatePresu27Kpis('',0); document.getElementById('p27ConfirmBar').style.display='none'; return; }
+      if(!repre){ body.innerHTML='<tr><td colspan="10" style="text-align:center;padding:18px;color:#94a3b8;font-weight:600;">Sin representante asignado.</td></tr>'; foot.innerHTML=''; updatePresu27Kpis('',0); document.getElementById('p27ConfirmBar').style.display='none'; return; }
       var rows=buildPresu2027Rows(repre);
       if(!presu27Draft[repre]) presu27Draft[repre]={};
       var draft=presu27Draft[repre];
       var tot={y24:0,y25:0,s:0,m:0,t:0,o:0,tot26:0};
       body.innerHTML=rows.map(function(c){
           tot.y24+=c.y24;tot.y25+=c.y25;tot.s+=c.s;tot.m+=c.m;tot.t+=c.t;tot.o+=c.o;tot.tot26+=c.tot26;
-          var val=(draft[c.key]!=null)?draft[c.key]:'';
-          var dis=esGerencial()?'disabled':'';
+          var num=(draft[c.key]!=null)?draft[c.key]:'';
+          var val=(num==='')?'':p27InputDisplay(num);
+          var dis=(esGerencial()||p27Locked)?'disabled':'';
           return '<tr>'
               +'<td class="col-name" title="'+c.name+'">'+c.name+'</td>'
-              +'<td class="num">'+p27fmt(c.y24)+'</td><td class="num">'+p27fmt(c.y25)+'</td>'
-              +'<td class="num">'+p27fmt(c.s)+'</td><td class="num">'+p27fmt(c.m)+'</td><td class="num">'+p27fmt(c.t)+'</td><td class="num">'+p27fmt(c.o)+'</td>'
-              +'<td class="num" style="font-weight:700;">'+p27fmt(c.tot26)+'</td>'
-              +'<td class="c27"><input type="number" min="0" step="100" class="presu27-input" data-key="'+c.key+'" data-cuit="'+c.cuit+'" data-nombre="'+encodeURIComponent(c.name)+'" value="'+val+'" '+dis+' oninput="onPresu27Input(this)" placeholder="—"><span class="p27-stat"></span></td>'
+              +'<td class="num y24">'+p27fmt(c.y24)+'</td><td class="num y25">'+p27fmt(c.y25)+'</td>'
+              +'<td class="num e26">'+p27fmt(c.s)+'</td><td class="num e26">'+p27fmt(c.m)+'</td><td class="num e26">'+p27fmt(c.t)+'</td><td class="num e26">'+p27fmt(c.o)+'</td>'
+              +'<td class="num e26tot">'+p27fmt(c.tot26)+'</td>'
+              +'<td class="c27"><input type="text" inputmode="numeric" class="presu27-input" data-key="'+c.key+'" data-cuit="'+c.cuit+'" data-nombre="'+encodeURIComponent(c.name)+'" data-tot26="'+c.tot26+'" value="'+val+'" '+dis+' oninput="onPresu27Input(this)" placeholder="—"><span class="p27-stat"></span></td>'
+              +'<td class="vsind" data-ind="'+c.key+'">'+p27Indicador((num===''?0:parseFloat(num)),c.tot26)+'</td>'
               +'</tr>';
       }).join('');
       foot.innerHTML='<tr><td class="col-name">TOTAL — '+rows.length+' clientes</td>'
-          +'<td class="num">'+p27fmt(tot.y24)+'</td><td class="num">'+p27fmt(tot.y25)+'</td>'
-          +'<td class="num">'+p27fmt(tot.s)+'</td><td class="num">'+p27fmt(tot.m)+'</td><td class="num">'+p27fmt(tot.t)+'</td><td class="num">'+p27fmt(tot.o)+'</td>'
-          +'<td class="num">'+p27fmt(tot.tot26)+'</td>'
-          +'<td class="num c27" id="p27FootTotal">'+p27fmt(p27sumDraft(repre))+'</td></tr>';
+          +'<td class="num y24">'+p27fmt(tot.y24)+'</td><td class="num y25">'+p27fmt(tot.y25)+'</td>'
+          +'<td class="num e26">'+p27fmt(tot.s)+'</td><td class="num e26">'+p27fmt(tot.m)+'</td><td class="num e26">'+p27fmt(tot.t)+'</td><td class="num e26">'+p27fmt(tot.o)+'</td>'
+          +'<td class="num e26tot">'+p27fmt(tot.tot26)+'</td>'
+          +'<td class="num c27" id="p27FootTotal">'+p27fmt(p27sumDraft(repre))+'</td>'
+          +'<td class="vsind" id="p27FootInd">'+p27Indicador(p27sumDraft(repre),tot.tot26)+'</td></tr>';
       updatePresu27Kpis(repre,tot.tot26);
       p27UpdateConfirmUI(repre);
+      p27UpdateDeadline();
       p27LoadSaved(repre);
   }
 
   function onPresu27Input(el){
+      p27FmtMiles(el);                       // agrega el punto de miles mientras se escribe
       var repre=document.getElementById('presu27Rep').value;
       var key=el.getAttribute('data-key');
       if(!presu27Draft[repre])presu27Draft[repre]={};
-      var v=el.value.trim();
-      if(v==='')delete presu27Draft[repre][key]; else presu27Draft[repre][key]=parseFloat(v)||0;
+      var v=p27ParseInput(el.value);         // número limpio (sin puntos) o ''
+      if(v==='')delete presu27Draft[repre][key]; else presu27Draft[repre][key]=v;
+      // indicador de la fila
+      var tot26=parseFloat(el.getAttribute('data-tot26'))||0;
+      var indTd=el.parentNode.nextElementSibling;
+      if(indTd) indTd.innerHTML=p27Indicador((v===''?0:v),tot26);
+      // totales
       var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){real26+=c.tot26;});
       var ft=document.getElementById('p27FootTotal'); if(ft)ft.textContent=p27fmt(p27sumDraft(repre));
+      var fi=document.getElementById('p27FootInd'); if(fi)fi.innerHTML=p27Indicador(p27sumDraft(repre),real26);
       updatePresu27Kpis(repre,real26);
-      if(!esGerencial()) p27QueueSave(repre, el);
+      if(!esGerencial() && !p27Locked) p27QueueSave(repre, el);
   }
 
   // --- Persistencia (JSONP al Apps Script) ---
@@ -282,7 +342,8 @@
       p27LoadDone=false;
       presu27Confirmado[repre]=false;
       p27Jsonp({action:'presu2027_load',repre:repre}).then(function(resp){
-          if(!resp||!resp.ok||!resp.rows) return;
+          if(resp){ if(resp.lockDate!=null)p27LockDate=resp.lockDate; if(resp.locked!=null)p27Locked=!!resp.locked; }
+          if(!resp||!resp.ok||!resp.rows){ p27ApplyLockUI(); return; }
           if(document.getElementById('presu27Rep').value!==repre) return;
           if(!presu27Draft[repre])presu27Draft[repre]={};
           resp.rows.forEach(function(r){
@@ -293,12 +354,19 @@
               var tn=parseFloat(r.tn); if(isNaN(tn)) return;
               presu27Draft[repre][k]=tn;
               var inp=document.querySelector('.presu27-input[data-key="'+k.replace(/"/g,'')+'"]');
-              if(inp){ inp.value=tn; var st=inp.parentNode.querySelector('.p27-stat'); if(st){st.textContent='✓';st.className='p27-stat ok';} }
+              if(inp){
+                  inp.value=p27InputDisplay(tn);
+                  var st=inp.parentNode.querySelector('.p27-stat'); if(st){st.textContent='✓';st.className='p27-stat ok';}
+                  var indTd=inp.parentNode.nextElementSibling;
+                  if(indTd) indTd.innerHTML=p27Indicador(tn, parseFloat(inp.getAttribute('data-tot26'))||0);
+              }
           });
           var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){real26+=c.tot26;});
           var ft=document.getElementById('p27FootTotal'); if(ft)ft.textContent=p27fmt(p27sumDraft(repre));
+          var fi=document.getElementById('p27FootInd'); if(fi)fi.innerHTML=p27Indicador(p27sumDraft(repre),real26);
           updatePresu27Kpis(repre,real26);
           p27UpdateConfirmUI(repre);
+          p27ApplyLockUI();
       }).catch(function(){}).then(function(){ p27LoadDone=true; });
   }
   // Guardado serializado (cola de a uno) + gate carga-antes-de-guardar
@@ -326,9 +394,9 @@
   }
   function p27SaveCell(repre, el){
       var st=el.parentNode.querySelector('.p27-stat');
-      var tnRaw=el.value.trim();
+      var tnVal=p27ParseInput(el.value);
       var params={action:'presu2027_save',key:el.getAttribute('data-key'),cuit:el.getAttribute('data-cuit')||'',
-          nombre:decodeURIComponent(el.getAttribute('data-nombre')||''),repre:repre,tn:(tnRaw===''?'':(parseFloat(tnRaw)||0))};
+          nombre:decodeURIComponent(el.getAttribute('data-nombre')||''),repre:repre,tn:(tnVal===''?'':tnVal)};
       return p27Jsonp(params).then(function(resp){
           if(resp&&resp.ok){ if(st){st.textContent='✓';st.className='p27-stat ok';} }
           else { if(st){st.textContent='⚠';st.className='p27-stat err';st.title=(resp&&resp.error)||'No se pudo guardar';} }
@@ -363,6 +431,13 @@
       var conf=!!presu27Confirmado[repre];
       var st=document.getElementById('p27ConfirmStatus');
       var btn=document.getElementById('p27ConfirmBtn');
+      if(p27Locked){
+          st.innerHTML='<span style="color:#b91c1c;font-weight:800;">🔒 Carga cerrada el '+p27FmtFecha(p27LockDate)+'</span>'
+              +(conf?' <span style="color:#16a34a;font-weight:700;">· confirmado ✓</span>':' <span style="color:#64748b;">· quedó sin confirmar</span>');
+          btn.style.display='none';
+          return;
+      }
+      btn.style.display='';
       btn.disabled=false;
       if(conf){
           st.innerHTML='<span style="color:#16a34a;font-weight:800;">✓ Presupuesto confirmado</span>';
@@ -388,7 +463,10 @@
 
   // ---------- AVANCE (gerencial) ----------
   function p27LoadAll(){
-      return p27Jsonp({action:'presu2027_load',repre:'__ALL__'}).then(function(resp){ return (resp&&resp.ok&&resp.rows)?resp.rows:[]; }).catch(function(){ return []; });
+      return p27Jsonp({action:'presu2027_load',repre:'__ALL__'}).then(function(resp){
+          if(resp){ if(resp.lockDate!=null)p27LockDate=resp.lockDate; if(resp.locked!=null)p27Locked=!!resp.locked; }
+          return (resp&&resp.ok&&resp.rows)?resp.rows:[];
+      }).catch(function(){ return []; });
   }
   function p27BuildAvance(allRows){
       var per={};
