@@ -193,10 +193,30 @@
       return allow.indexOf(p27CuitDigits(k.slice(5)))>=0;
   }
 
+  // --- Dueño actual de cada cliente = comercial de su operación MÁS RECIENTE ---
+  // Un cliente que rotó de comercial se presupuesta solo en la cartera del dueño actual;
+  // en las demás carteras aparece visible pero bloqueado (no suma).
+  var _p27Owner=null;
+  function p27OwnerMap(){
+      if(_p27Owner) return _p27Owner;
+      var m={};
+      DB.forEach(function(d){
+          if(!(d.v||d.cuitLimpio))return;
+          var key=d.cuitLimpio?'CUIT_'+d.cuitLimpio:'NAME_'+d.v;
+          var ts=(d.dObj&&d.dObj.getTime)?d.dObj.getTime():0;
+          var cur=m[key];
+          if(!cur || ts>cur.ts){ m[key]={ts:ts, owner:normalize(d.r), ownerRaw:d.r}; }
+      });
+      _p27Owner=m; return m;
+  }
+  function p27EsDueno(repre,key){ var o=p27OwnerMap()[key]; return !o || o.owner===normalize(repre); }
+  function p27DuenoNombre(key){ var o=p27OwnerMap()[key]; return o?o.ownerRaw:''; }
+
   function buildPresu2027Rows(repre){
       var cmap = {};
+      var repN = normalize(repre);
       DB.forEach(function(d){
-          if(d.r !== repre) return;
+          if(normalize(d.r) !== repN) return;   // comparar normalizado (ej. "AVENDAÑO" vs "AVENDANO")
           if(!p27ClienteOK(repre,d)) return;
           if(!(d.v || d.cuitLimpio)) return;
           var key = d.cuitLimpio ? 'CUIT_'+d.cuitLimpio : 'NAME_'+d.v;
@@ -207,8 +227,14 @@
           else if(d.e==='2025') c.y25+=d.vol;
           else if(d.e==='2026'){ if(d.cat==='SOJA')c.s+=d.vol; else if(d.cat==='MAIZ')c.m+=d.vol; else if(d.cat==='TRIGO')c.t+=d.vol; else c.o+=d.vol; }
       });
-      var rows = Object.keys(cmap).map(function(k){var c=cmap[k]; c.tot26=c.s+c.m+c.t+c.o; return c;}).filter(function(c){return (c.y24+c.y25+c.tot26)>0;});
-      rows.sort(function(a,b){return b.tot26-a.tot26;});
+      var rows = Object.keys(cmap).map(function(k){
+          var c=cmap[k]; c.tot26=c.s+c.m+c.t+c.o;
+          c.owned=p27EsDueno(repre,c.key);           // ¿este comercial es el dueño actual?
+          c.ownerRaw=c.owned?'':p27DuenoNombre(c.key);
+          return c;
+      }).filter(function(c){return (c.y24+c.y25+c.tot26)>0;});
+      // Dueños primero (por 2026 desc); los bloqueados (rotados) al final
+      rows.sort(function(a,b){ if(a.owned!==b.owned) return a.owned?-1:1; return b.tot26-a.tot26; });
       return rows;
   }
 
@@ -235,6 +261,7 @@
   }
 
   function openPresu2027(){
+      _p27Owner=null;   // recalcular dueños por si el dashboard refrescó el DB
       var sel=document.getElementById('presu27Rep');
       var ger=esGerencial();
       var repres = ger ? listaRepres() : (USER_REPRESENTANTE ? [USER_REPRESENTANTE] : []);
@@ -276,21 +303,35 @@
       if(!presu27Draft[repre]) presu27Draft[repre]={};
       var draft=presu27Draft[repre];
       var tot={y24:0,y25:0,s:0,m:0,t:0,o:0,tot26:0};
+      var ownedCount=0;
       body.innerHTML=rows.map(function(c){
+          var hist='<td class="num y24">'+p27fmt(c.y24)+'</td><td class="num y25">'+p27fmt(c.y25)+'</td>'
+              +'<td class="num e26">'+p27fmt(c.s)+'</td><td class="num e26">'+p27fmt(c.m)+'</td><td class="num e26">'+p27fmt(c.t)+'</td><td class="num e26">'+p27fmt(c.o)+'</td>'
+              +'<td class="num e26tot">'+p27fmt(c.tot26)+'</td>';
+          if(!c.owned){
+              // Cliente rotado a otro comercial: visible pero bloqueado (no suma)
+              return '<tr style="color:#94a3b8;background:#fbfbfc;">'
+                  +'<td class="col-name" title="'+c.name+' — rotó a '+(c.ownerRaw||'otro comercial')+'">'+c.name+'</td>'
+                  +hist
+                  +'<td class="c27" style="opacity:.9;"><span style="font-size:0.64rem;color:#64748b;font-weight:700;" title="Este cliente opera hoy con otro comercial">🔒 cartera de '+(c.ownerRaw||'otro comercial')+'</span></td>'
+                  +'<td class="vsind"><span style="color:#cbd5e1;">—</span></td>'
+                  +'</tr>';
+          }
+          ownedCount++;
           tot.y24+=c.y24;tot.y25+=c.y25;tot.s+=c.s;tot.m+=c.m;tot.t+=c.t;tot.o+=c.o;tot.tot26+=c.tot26;
           var num=(draft[c.key]!=null)?draft[c.key]:'';
           var val=(num==='')?'':p27InputDisplay(num);
           var dis=(esGerencial()||p27Locked)?'disabled':'';
           return '<tr>'
               +'<td class="col-name" title="'+c.name+'">'+c.name+'</td>'
-              +'<td class="num y24">'+p27fmt(c.y24)+'</td><td class="num y25">'+p27fmt(c.y25)+'</td>'
-              +'<td class="num e26">'+p27fmt(c.s)+'</td><td class="num e26">'+p27fmt(c.m)+'</td><td class="num e26">'+p27fmt(c.t)+'</td><td class="num e26">'+p27fmt(c.o)+'</td>'
-              +'<td class="num e26tot">'+p27fmt(c.tot26)+'</td>'
+              +hist
               +'<td class="c27"><input type="text" inputmode="numeric" class="presu27-input" data-key="'+c.key+'" data-cuit="'+c.cuit+'" data-nombre="'+encodeURIComponent(c.name)+'" data-tot26="'+c.tot26+'" value="'+val+'" '+dis+' oninput="onPresu27Input(this)" placeholder="—"><span class="p27-stat"></span></td>'
               +'<td class="vsind" data-ind="'+c.key+'">'+p27Indicador((num===''?0:parseFloat(num)),c.tot26)+'</td>'
               +'</tr>';
       }).join('');
-      foot.innerHTML='<tr><td class="col-name">TOTAL — '+rows.length+' clientes</td>'
+      var rotados=rows.length-ownedCount;
+      var footLabel='TOTAL — '+ownedCount+' clientes'+(rotados>0?' <span style="font-weight:600;color:#94a3b8;">(+'+rotados+' rotado'+(rotados>1?'s':'')+')</span>':'');
+      foot.innerHTML='<tr><td class="col-name">'+footLabel+'</td>'
           +'<td class="num y24">'+p27fmt(tot.y24)+'</td><td class="num y25">'+p27fmt(tot.y25)+'</td>'
           +'<td class="num e26">'+p27fmt(tot.s)+'</td><td class="num e26">'+p27fmt(tot.m)+'</td><td class="num e26">'+p27fmt(tot.t)+'</td><td class="num e26">'+p27fmt(tot.o)+'</td>'
           +'<td class="num e26tot">'+p27fmt(tot.tot26)+'</td>'
@@ -313,8 +354,8 @@
       var tot26=parseFloat(el.getAttribute('data-tot26'))||0;
       var indTd=el.parentNode.nextElementSibling;
       if(indTd) indTd.innerHTML=p27Indicador((v===''?0:v),tot26);
-      // totales
-      var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){real26+=c.tot26;});
+      // totales (solo clientes propios; los rotados no suman)
+      var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){ if(c.owned) real26+=c.tot26;});
       var ft=document.getElementById('p27FootTotal'); if(ft)ft.textContent=p27fmt(p27sumDraft(repre));
       var fi=document.getElementById('p27FootInd'); if(fi)fi.innerHTML=p27Indicador(p27sumDraft(repre),real26);
       updatePresu27Kpis(repre,real26);
@@ -351,6 +392,7 @@
               var k=String(r.key);
               if(k.indexOf('__')===0){ if(k==='__CONFIRMADO__') presu27Confirmado[repre]=true; return; }
               if(!p27KeyOK(repre,k)) return;
+              if(!p27EsDueno(repre,k)) return;   // cliente rotado: no se presupuesta acá
               var tn=parseFloat(r.tn); if(isNaN(tn)) return;
               presu27Draft[repre][k]=tn;
               var inp=document.querySelector('.presu27-input[data-key="'+k.replace(/"/g,'')+'"]');
@@ -361,7 +403,7 @@
                   if(indTd) indTd.innerHTML=p27Indicador(tn, parseFloat(inp.getAttribute('data-tot26'))||0);
               }
           });
-          var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){real26+=c.tot26;});
+          var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){ if(c.owned) real26+=c.tot26;});
           var ft=document.getElementById('p27FootTotal'); if(ft)ft.textContent=p27fmt(p27sumDraft(repre));
           var fi=document.getElementById('p27FootInd'); if(fi)fi.innerHTML=p27Indicador(p27sumDraft(repre),real26);
           updatePresu27Kpis(repre,real26);
@@ -410,7 +452,7 @@
       var cumpl=presup26>0?(real26/presup26*100):0;
       document.getElementById('p27Total').innerText=Math.round(total27).toLocaleString('de-DE')+' Tn';
       var d=presu27Draft[repre]||{};var n=Object.keys(d).filter(function(k){return d[k]>0;}).length;
-      var totalRows=repre?buildPresu2027Rows(repre).length:0;
+      var totalRows=repre?buildPresu2027Rows(repre).filter(function(c){return c.owned;}).length:0;
       document.getElementById('p27Count').innerText=n+' de '+totalRows+' clientes cargados';
       document.getElementById('p27Real26').innerText=Math.round(real26).toLocaleString('de-DE')+' Tn';
       document.getElementById('p27Cumpl').innerText='Presup 2026: '+Math.round(presup26).toLocaleString('de-DE')+' ('+cumpl.toFixed(1)+'%)';
@@ -471,22 +513,25 @@
   function p27BuildAvance(allRows){
       var per={};
       DB.forEach(function(d){
-          if(!(d.v||d.cuitLimpio))return; var rep=d.r; if(!rep)return;
+          if(!(d.v||d.cuitLimpio))return; var rep=normalize(d.r); if(!rep)return;
           if(!p27ClienteOK(rep,d))return;
-          if(!per[rep])per[rep]={cl:{},vol26:0};
           var key=d.cuitLimpio?'CUIT_'+d.cuitLimpio:'NAME_'+d.v;
+          if(!p27EsDueno(rep,key))return;   // cliente rotado: no cuenta para este comercial
+          if(!per[rep])per[rep]={cl:{},vol26:0};
           if(!per[rep].cl[key])per[rep].cl[key]={hist:0,v26:0};
           if(d.e==='2024'||d.e==='2025'||d.e==='2026'){ per[rep].cl[key].hist+=d.vol; if(d.e==='2026'){per[rep].cl[key].v26+=d.vol; per[rep].vol26+=d.vol;} }
       });
       var sv={};
       allRows.forEach(function(r){
-          var rep=r.repre; if(!rep)return; if(!sv[rep])sv[rep]={loaded:{},tn:0,conf:false};
+          var rep=normalize(r.repre); if(!rep)return; if(!sv[rep])sv[rep]={loaded:{},tn:0,conf:false};
           var k=String(r.key); if(k.indexOf('__')===0){ if(k==='__CONFIRMADO__')sv[rep].conf=true; return; }
           if(!p27KeyOK(rep,k))return;
+          if(!p27EsDueno(rep,k))return;   // guardado de un cliente rotado: no cuenta
           var tn=parseFloat(r.tn)||0; sv[rep].loaded[k]=tn; sv[rep].tn+=tn;
       });
       return listaRepres().map(function(rep){
-          var p=per[rep]||{cl:{},vol26:0}; var s=sv[rep]||{loaded:{},tn:0,conf:false};
+          var rk=normalize(rep);
+          var p=per[rk]||{cl:{},vol26:0}; var s=sv[rk]||{loaded:{},tn:0,conf:false};
           var M=Object.keys(p.cl).filter(function(k){return p.cl[k].hist>0;}).length;
           var N=Object.keys(s.loaded).length;
           var cov=0; Object.keys(s.loaded).forEach(function(k){ if(p.cl[k])cov+=p.cl[k].v26; });
