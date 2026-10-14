@@ -42,14 +42,17 @@
         .presu27-input:disabled { background:#f1f5f9; color:#64748b; }
         .p27-stat { display:inline-block; margin-left:6px; width:12px; font-size:0.72rem; font-weight:800; vertical-align:middle; }
         .p27-stat.saving { color:#94a3b8; } .p27-stat.ok { color:var(--primary); } .p27-stat.err { color:#dc2626; cursor:help; }
-        #presu27Modal .budget-summary-container { margin-left:0; }
+        #presu2027Modal .budget-summary-container { margin-left:0; flex:1 1 auto; }
+        #presu2027Modal .budget-kpi-card { flex:1 1 0; min-width:150px; }
         /* Solapas */
         #p27Tabs { display:flex; gap:6px; margin-top:10px; }
         .p27-tab { padding:7px 16px; border:none; border-radius:8px 8px 0 0; font-size:0.74rem; font-weight:800; cursor:pointer; background:#eef1f4; color:#64748b; }
         .p27-tab.active { background:var(--primary); color:#fff; }
         /* Panes */
         #p27PaneAvance, #p27PaneRepre { flex:1; min-height:0; flex-direction:column; }
-        .p27-repre-head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:0 2px 10px; }
+        .p27-repre-head { display:flex; align-items:stretch; gap:14px; flex-wrap:wrap; padding:0 2px 10px; }
+        #presu2027Modal .history-select-wrapper { flex:0 0 auto; display:flex; align-items:center; }
+        #presu2027Modal .history-select-wrapper .modal-select-modern { height:100%; }
         /* Contadores del avance */
         .p27-counters { display:flex; gap:10px; padding:4px 2px 12px; }
         .p27-counter { flex:1; background:#f8fafc; border:1px solid #eef1f4; border-radius:10px; padding:10px 14px; text-align:center; }
@@ -309,11 +312,11 @@
               +'<td class="num e26">'+p27fmt(c.s)+'</td><td class="num e26">'+p27fmt(c.m)+'</td><td class="num e26">'+p27fmt(c.t)+'</td><td class="num e26">'+p27fmt(c.o)+'</td>'
               +'<td class="num e26tot">'+p27fmt(c.tot26)+'</td>';
           if(!c.owned){
-              // Cliente rotado a otro comercial: visible pero bloqueado (no suma)
-              return '<tr style="color:#94a3b8;background:#fbfbfc;">'
-                  +'<td class="col-name" title="'+c.name+' — rotó a '+(c.ownerRaw||'otro comercial')+'">'+c.name+'</td>'
+              // Cliente rotado a otro comercial: visible, con la celda de presupuesto bloqueada (no suma)
+              return '<tr>'
+                  +'<td class="col-name" title="'+c.name+'">'+c.name+'</td>'
                   +hist
-                  +'<td class="c27" style="opacity:.9;"><span style="font-size:0.64rem;color:#64748b;font-weight:700;" title="Este cliente opera hoy con otro comercial">🔒 cartera de '+(c.ownerRaw||'otro comercial')+'</span></td>'
+                  +'<td class="c27"><input type="text" class="presu27-input" value="" disabled placeholder="—"><span class="p27-stat"></span></td>'
                   +'<td class="vsind"><span style="color:#cbd5e1;">—</span></td>'
                   +'</tr>';
           }
