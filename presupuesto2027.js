@@ -143,10 +143,31 @@
   function esGerencial(){ return USER_ROL === 'GERENCIAL'; }
   function listaRepres(){ return budgetData.filter(function(b){return !b.reserva;}).map(function(b){return b.r;}).sort(function(a,b){return a.localeCompare(b,'es');}); }
 
+  // --- Repres con cartera acotada: sólo computan ciertos CUIT (el resto a su nombre se ignora) ---
+  var P27_CUIT_UNICOS = [
+      { match:'TITTAFERRANTE', cuits:['30646328450'] }   // Andrés Tittaferrante -> sólo Syngenta Agro SA
+  ];
+  function p27CuitDigits(s){ return String(s||'').replace(/\D/g,''); }
+  function p27CuitPermitidos(repre){
+      var n = normalize(repre);
+      for(var i=0;i<P27_CUIT_UNICOS.length;i++){ if(n.indexOf(P27_CUIT_UNICOS[i].match)>=0) return P27_CUIT_UNICOS[i].cuits; }
+      return null; // null = sin restricción (toma todos los clientes)
+  }
+  function p27ClienteOK(repre,d){
+      var allow=p27CuitPermitidos(repre); if(!allow) return true;
+      return allow.indexOf(p27CuitDigits(d.cuitLimpio))>=0;
+  }
+  function p27KeyOK(repre,key){
+      var allow=p27CuitPermitidos(repre); if(!allow) return true;
+      var k=String(key); if(k.indexOf('CUIT_')!==0) return false;
+      return allow.indexOf(p27CuitDigits(k.slice(5)))>=0;
+  }
+
   function buildPresu2027Rows(repre){
       var cmap = {};
       DB.forEach(function(d){
           if(d.r !== repre) return;
+          if(!p27ClienteOK(repre,d)) return;
           if(!(d.v || d.cuitLimpio)) return;
           var key = d.cuitLimpio ? 'CUIT_'+d.cuitLimpio : 'NAME_'+d.v;
           if(!cmap[key]) cmap[key]={key:key,cuit:d.cuitLimpio||'',name:(d.v||key.replace(/^NAME_/,'')),y24:0,y25:0,s:0,m:0,t:0,o:0,latest:0};
@@ -268,6 +289,7 @@
               if(normalize(r.repre)!==normalize(repre)) return;
               var k=String(r.key);
               if(k.indexOf('__')===0){ if(k==='__CONFIRMADO__') presu27Confirmado[repre]=true; return; }
+              if(!p27KeyOK(repre,k)) return;
               var tn=parseFloat(r.tn); if(isNaN(tn)) return;
               presu27Draft[repre][k]=tn;
               var inp=document.querySelector('.presu27-input[data-key="'+k.replace(/"/g,'')+'"]');
@@ -372,6 +394,7 @@
       var per={};
       DB.forEach(function(d){
           if(!(d.v||d.cuitLimpio))return; var rep=d.r; if(!rep)return;
+          if(!p27ClienteOK(rep,d))return;
           if(!per[rep])per[rep]={cl:{},vol26:0};
           var key=d.cuitLimpio?'CUIT_'+d.cuitLimpio:'NAME_'+d.v;
           if(!per[rep].cl[key])per[rep].cl[key]={hist:0,v26:0};
@@ -381,6 +404,7 @@
       allRows.forEach(function(r){
           var rep=r.repre; if(!rep)return; if(!sv[rep])sv[rep]={loaded:{},tn:0,conf:false};
           var k=String(r.key); if(k.indexOf('__')===0){ if(k==='__CONFIRMADO__')sv[rep].conf=true; return; }
+          if(!p27KeyOK(rep,k))return;
           var tn=parseFloat(r.tn)||0; sv[rep].loaded[k]=tn; sv[rep].tn+=tn;
       });
       return listaRepres().map(function(rep){
