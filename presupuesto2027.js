@@ -196,7 +196,8 @@
             });
         }
         function p27LoadSaved(repre){
-            if(!repre) return;
+            if(!repre){ p27LoadDone=true; return; }
+            p27LoadDone=false;
             p27Jsonp({action:'presu2027_load',repre:repre}).then(function(resp){
                 if(!resp||!resp.ok||!resp.rows) return;
                 if(document.getElementById('presu27Rep').value!==repre) return; // cambió de repre mientras cargaba
@@ -211,11 +212,11 @@
                 var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){real26+=c.tot26;});
                 var ft=document.getElementById('p27FootTotal'); if(ft)ft.textContent=p27fmt(p27sumDraft(repre));
                 updatePresu27Kpis(repre,real26);
-            }).catch(function(){});
+            }).catch(function(){}).then(function(){ p27LoadDone=true; });
         }
         // Guardado serializado: una cola que manda de a UN request por vez.
         // Evita la condición de carrera (título en fila 2) y los ⚠ por saturar el backend.
-        var p27Queue=[]; var p27Working=false;
+        var p27Queue=[]; var p27Working=false; var p27LoadDone=true;
         function p27QueueSave(repre, el){
             var key=el.getAttribute('data-key');
             var st=el.parentNode.querySelector('.p27-stat'); if(st){st.textContent='…';st.className='p27-stat saving';}
@@ -232,6 +233,7 @@
         }
         function p27Drain(){
             if(p27Working) return;
+            if(!p27LoadDone){ setTimeout(p27Drain, 150); return; } // esperar a que termine la carga inicial (crea la pestaña con el título)
             var job=p27Queue.shift();
             if(!job) return;
             p27Working=true;
