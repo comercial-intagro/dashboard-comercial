@@ -4447,6 +4447,16 @@ ${totalsRow}
                 totalProd[p] += d.vol;
             });
 
+            // Total general (todos los productos, todas las zonas)
+            var granTotal = PRODUCTOS_ALL.reduce(function(a,p){ return a+totalProd[p]; }, 0);
+            // Min/max POR COLUMNA (producto) para la escala de color
+            var colMin = {}, colMax = {};
+            PRODUCTOS_VIS.forEach(function(p){
+                var vals = ZONAS.map(function(z){ return matriz[z][p]; }).filter(function(v){ return v>0; });
+                colMin[p] = vals.length ? Math.min.apply(null, vals) : 0;
+                colMax[p] = vals.length ? Math.max.apply(null, vals) : 0;
+            });
+
             // Encabezado dinámico
             var thHtml = '<th style="text-align:left;">Destino</th>';
             PRODUCTOS_VIS.forEach(function(p){ thHtml += '<th style="text-align:right;">' + PROD_LABEL[p] + '</th>'; });
@@ -4468,19 +4478,18 @@ ${totalsRow}
             // Filas (zonas)
             tbody.innerHTML = '';
             ZONAS.forEach(function(z){
-                // % sobre el total de la fila con los 6 productos
                 var totalFila6 = PRODUCTOS_ALL.reduce(function(a,p){ return a+matriz[z][p]; }, 0);
-                // Escala de color sobre los productos VISIBLES
-                var valsVis = PRODUCTOS_VIS.map(function(p){ return matriz[z][p]; }).filter(function(v){ return v>0; });
-                var minR = valsVis.length ? Math.min.apply(null, valsVis) : 0;
-                var maxR = valsVis.length ? Math.max.apply(null, valsVis) : 0;
+                // Incidencia del destino sobre el total general (todos los productos)
+                var incDest = granTotal>0 ? (totalFila6/granTotal*100) : 0;
                 var tr = document.createElement('tr');
-                var celdas = '<td class="matriz-destino">' + ZONA_LABEL[z] + '</td>';
+                var celdas = '<td class="matriz-destino">' + ZONA_LABEL[z]
+                    + ' <span class="matriz-pct" style="color:#64748b;font-weight:700;">' + incDest.toFixed(0) + '%</span></td>';
                 PRODUCTOS_VIS.forEach(function(p){
                     var v = matriz[z][p];
                     if (v > 0) {
-                        var pct = totalFila6>0 ? (v/totalFila6*100).toFixed(0) : 0;
-                        var c = colorPct(v, minR, maxR);
+                        // % respecto al total comercializado de ESE producto (columna)
+                        var pct = totalProd[p]>0 ? (v/totalProd[p]*100).toFixed(0) : 0;
+                        var c = colorPct(v, colMin[p], colMax[p]);
                         celdas += '<td><span class="matriz-vol">' + fmt(v) + '</span> <span class="matriz-pct" style="color:'+c+';">' + pct + '%</span></td>';
                     } else {
                         celdas += '<td>-</td>';
@@ -4489,10 +4498,9 @@ ${totalsRow}
                 tr.innerHTML = celdas;
                 tbody.appendChild(tr);
             });
-            // Fila TOTAL
-            var granTotal = PRODUCTOS_ALL.reduce(function(a,p){ return a+totalProd[p]; }, 0);
+            // Fila TOTAL — cada producto muestra su incidencia sobre el total general (mix)
             var trTot = document.createElement('tr');
-            var tc = '<td class="matriz-destino">TOTAL</td>';
+            var tc = '<td class="matriz-destino">TOTAL <span class="matriz-pct" style="color:#64748b;font-weight:700;">100%</span></td>';
             PRODUCTOS_VIS.forEach(function(p){
                 if (totalProd[p] > 0) {
                     var pctT = granTotal>0 ? (totalProd[p]/granTotal*100).toFixed(0) : 0;
