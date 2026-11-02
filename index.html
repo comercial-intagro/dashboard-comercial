@@ -2265,6 +2265,13 @@
             // general, se usa esa, para que un repre calcule con la misma fecha que la
             // vista gerencial (aunque su última operación sea anterior).
             maxDateInDB = (GLOBAL_MAX_DATE && !isNaN(GLOBAL_MAX_DATE.getTime())) ? GLOBAL_MAX_DATE : latestDate;
+            // ===== CONGELAR VISTA DE CIERRE EJERCICIO 2026 (TEMPORAL) =====
+            // Mientras esta constante tenga una fecha, el dashboard usa esa fecha como
+            // referencia y mantiene su mes como el mes en curso (NO rota al ejercicio
+            // siguiente aunque entren datos). Para arrancar el ejercicio 2027:
+            // poner  const FREEZE_REF_DATE = '';   (vacío) y volver a desplegar.
+            const FREEZE_REF_DATE = '2026-10-30';
+            if (FREEZE_REF_DATE) { maxDateInDB = new Date(FREEZE_REF_DATE + 'T00:00:00'); }
             if(maxDateInDB){
                 let maxY=maxDateInDB.getFullYear();
                 let maxM_index=maxDateInDB.getMonth();
@@ -2284,6 +2291,9 @@
                 latestDateCmp.setHours(0,0,0,0);
                 if(latestDateCmp.getTime()>=lastWD.getTime()){dynamicCurrentMonth=(maxM_index===11)?1:(maxM_index+2);}
                 else{dynamicCurrentMonth=maxM_index+1;}
+                // Congelado: el mes de la fecha de referencia queda como mes EN CURSO
+                // (no rota al mes siguiente) para ver la foto de cierre del ejercicio.
+                if (FREEZE_REF_DATE) { dynamicCurrentMonth = maxM_index + 1; }
             }
 
             if(DB.length>0){
