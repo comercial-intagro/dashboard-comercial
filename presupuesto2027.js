@@ -19,6 +19,10 @@
         #presu27Table tbody td, #p27AvanceTable tbody td { border-bottom:1px solid #f1f5f9; color:#1e293b; }
         #presu27Table tbody tr:nth-child(even), #p27AvanceTable tbody tr:nth-child(even) { background:#fafbfc; }
         #presu27Table tbody tr:hover, #p27AvanceTable tbody tr:hover { background:#f0fdf4; }
+        /* Prospecto (HABILITADO TARNET): fila verde claro + asterisco */
+        #presu27Table tbody tr.p27-prospecto { background:#ecfdf3 !important; }
+        #presu27Table tbody tr.p27-prospecto:hover { background:#d9f6e4 !important; }
+        .p27-prosp-star { color:var(--primary); font-weight:900; }
         #presu27Table td.num, #presu27Table th.num, #p27AvanceTable td.num, #p27AvanceTable th.num { text-align:right; font-variant-numeric:tabular-nums; }
         #presu27Table td.col-name, #p27AvanceTable td.col-name { text-align:left; font-weight:600; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         #p27AvanceTable th.col-name { text-align:left; }
@@ -74,7 +78,7 @@
                 <div class="modal-header-top">
                     <div>
                         <h2 style="color:var(--primary);font-weight:800;font-size:1.2rem;">Presupuesto 2027</h2>
-                        <div style="font-size:0.7rem;color:#64748b;font-weight:600;margin-top:2px;">Objetivo de toneladas por cliente para el ejercicio comercial 2027</div>
+                        <div style="font-size:0.7rem;color:#64748b;font-weight:600;margin-top:2px;">Objetivo de toneladas por cliente para el ejercicio comercial 2027 &nbsp;·&nbsp; <span class="p27-prosp-star">*</span> Cliente Prospecto</div>
                     </div>
                     <div class="close-btn" onclick="toggleModal('presu2027Modal',false)"><i class="ri-close-line"></i></div>
                 </div>
@@ -196,48 +200,48 @@
       return allow.indexOf(p27CuitDigits(k.slice(5)))>=0;
   }
 
-  // --- Dueño actual de cada cliente = comercial de su operación MÁS RECIENTE ---
-  // Un cliente que rotó de comercial se presupuesta solo en la cartera del dueño actual;
-  // en las demás carteras aparece visible pero bloqueado (no suma).
-  var _p27Owner=null;
-  function p27OwnerMap(){
-      if(_p27Owner) return _p27Owner;
-      var m={};
-      DB.forEach(function(d){
-          if(!(d.v||d.cuitLimpio))return;
-          var key=d.cuitLimpio?'CUIT_'+d.cuitLimpio:'NAME_'+d.v;
-          var ts=(d.dObj&&d.dObj.getTime)?d.dObj.getTime():0;
-          var cur=m[key];
-          if(!cur || ts>cur.ts){ m[key]={ts:ts, owner:normalize(d.r), ownerRaw:d.r}; }
-      });
-      _p27Owner=m; return m;
-  }
-  function p27EsDueno(repre,key){ var o=p27OwnerMap()[key]; return !o || o.owner===normalize(repre); }
-  function p27DuenoNombre(key){ var o=p27OwnerMap()[key]; return o?o.ownerRaw:''; }
-
+  // --- Cartera del comercial = SU cartera en el maestro de clientes ---
+  // El dueño de cada cliente lo define el maestro (columna comercial / REPRE ESTADISTICO).
+  // El volumen histórico SIEMPRE sale de las operaciones y se atribuye al comercial que
+  // las hizo (campo d.r): así un cliente reasignado NO le lleva el volumen viejo al nuevo.
+  // (Se eliminó la vieja regla de rotación por "última operación".)
   function buildPresu2027Rows(repre){
       var cmap = {};
       var repN = normalize(repre);
+      // 1) Volumen que ESTE comercial hizo con cada cliente (desde las operaciones).
       DB.forEach(function(d){
           if(normalize(d.r) !== repN) return;   // comparar normalizado (ej. "AVENDAÑO" vs "AVENDANO")
           if(!p27ClienteOK(repre,d)) return;
           if(!(d.v || d.cuitLimpio)) return;
           var key = d.cuitLimpio ? 'CUIT_'+d.cuitLimpio : 'NAME_'+d.v;
-          if(!cmap[key]) cmap[key]={key:key,cuit:d.cuitLimpio||'',name:(d.v||key.replace(/^NAME_/,'')),y24:0,y25:0,s:0,m:0,t:0,o:0,latest:0};
+          if(!cmap[key]) cmap[key]={key:key,cuit:d.cuitLimpio||'',name:(d.v||key.replace(/^NAME_/,'')),y24:0,y25:0,s:0,m:0,t:0,o:0,latest:0,esProsp:false,enMaestro:false};
           var c=cmap[key];
           if(d.v && d.dObj){var ts=d.dObj.getTime(); if(ts>c.latest){c.latest=ts;c.name=d.v;}}
           if(d.e==='2024') c.y24+=d.vol;
           else if(d.e==='2025') c.y25+=d.vol;
           else if(d.e==='2026'){ if(d.cat==='SOJA')c.s+=d.vol; else if(d.cat==='MAIZ')c.m+=d.vol; else if(d.cat==='TRIGO')c.t+=d.vol; else c.o+=d.vol; }
       });
-      var rows = Object.keys(cmap).map(function(k){
-          var c=cmap[k]; c.tot26=c.s+c.m+c.t+c.o;
-          c.owned=p27EsDueno(repre,c.key);           // ¿este comercial es el dueño actual?
-          c.ownerRaw=c.owned?'':p27DuenoNombre(c.key);
-          return c;
-      }).filter(function(c){return (c.y24+c.y25+c.tot26)>0;});
-      // Dueños primero (por 2026 desc); los bloqueados (rotados) al final
-      rows.sort(function(a,b){ if(a.owned!==b.owned) return a.owned?-1:1; return b.tot26-a.tot26; });
+      // 2) Cartera asignada en el maestro (incluye clientes que todavía no operaron).
+      var lista = (typeof MAESTRO_BY_REPRE!=='undefined' && MAESTRO_BY_REPRE[repN]) ? MAESTRO_BY_REPRE[repN] : [];
+      lista.forEach(function(ent){
+          var key='CUIT_'+ent.cuit;
+          if(!p27KeyOK(repre,key)) return;       // respeta la restricción de CUIT (ej. Tittaferrante)
+          if(!cmap[key]) cmap[key]={key:key,cuit:ent.cuit,name:ent.nombre,y24:0,y25:0,s:0,m:0,t:0,o:0,latest:0,esProsp:false,enMaestro:false};
+          cmap[key].enMaestro=true;
+          if(ent.esProsp) cmap[key].esProsp=true;
+      });
+      // 3) Marca de prospecto por CUIT (por si operó y además está en el maestro).
+      Object.keys(cmap).forEach(function(k){
+          var cuit = (k.indexOf('CUIT_')===0)?k.slice(5):'';
+          var mEnt = (cuit && typeof MAESTRO_BY_CUIT!=='undefined')?MAESTRO_BY_CUIT[cuit]:null;
+          if(mEnt && mEnt.esProsp) cmap[k].esProsp=true;
+      });
+      var rows = Object.keys(cmap).map(function(k){ var c=cmap[k]; c.tot26=c.s+c.m+c.t+c.o; return c; });
+      // Presupuestables = SOLO la cartera del maestro de este comercial. Los que operó
+      // pero que ya NO son su cartera (reasignados o depurados) se ven en Evolución de
+      // cartera, no acá; el nuevo dueño los presupuesta en SU cartera.
+      rows = rows.filter(function(c){ return c.enMaestro; });
+      rows.sort(function(a,b){ return (b.tot26-a.tot26) || ((b.y24+b.y25)-(a.y24+a.y25)); });
       return rows;
   }
 
@@ -264,7 +268,6 @@
   }
 
   function openPresu2027(){
-      _p27Owner=null;   // recalcular dueños por si el dashboard refrescó el DB
       var sel=document.getElementById('presu27Rep');
       var ger=esGerencial();
       var repres = ger ? listaRepres() : (USER_REPRESENTANTE ? [USER_REPRESENTANTE] : []);
@@ -311,29 +314,20 @@
           var hist='<td class="num y24">'+p27fmt(c.y24)+'</td><td class="num y25">'+p27fmt(c.y25)+'</td>'
               +'<td class="num e26">'+p27fmt(c.s)+'</td><td class="num e26">'+p27fmt(c.m)+'</td><td class="num e26">'+p27fmt(c.t)+'</td><td class="num e26">'+p27fmt(c.o)+'</td>'
               +'<td class="num e26tot">'+p27fmt(c.tot26)+'</td>';
-          if(!c.owned){
-              // Cliente rotado a otro comercial: visible, con la celda de presupuesto bloqueada (no suma)
-              return '<tr>'
-                  +'<td class="col-name" title="'+c.name+'">'+c.name+'</td>'
-                  +hist
-                  +'<td class="c27"><input type="text" class="presu27-input" value="" disabled placeholder="—"><span class="p27-stat"></span></td>'
-                  +'<td class="vsind"><span style="color:#cbd5e1;">—</span></td>'
-                  +'</tr>';
-          }
           ownedCount++;
           tot.y24+=c.y24;tot.y25+=c.y25;tot.s+=c.s;tot.m+=c.m;tot.t+=c.t;tot.o+=c.o;tot.tot26+=c.tot26;
           var num=(draft[c.key]!=null)?draft[c.key]:'';
           var val=(num==='')?'':p27InputDisplay(num);
           var dis=(esGerencial()||p27Locked)?'disabled':'';
-          return '<tr>'
-              +'<td class="col-name" title="'+c.name+'">'+c.name+'</td>'
+          var star=c.esProsp?' <span class="p27-prosp-star">*</span>':'';
+          return '<tr'+(c.esProsp?' class="p27-prospecto"':'')+'>'
+              +'<td class="col-name" title="'+c.name+(c.esProsp?' (Cliente Prospecto)':'')+'">'+c.name+star+'</td>'
               +hist
               +'<td class="c27"><input type="text" inputmode="numeric" class="presu27-input" data-key="'+c.key+'" data-cuit="'+c.cuit+'" data-nombre="'+encodeURIComponent(c.name)+'" data-tot26="'+c.tot26+'" value="'+val+'" '+dis+' oninput="onPresu27Input(this)" placeholder="—"><span class="p27-stat"></span></td>'
               +'<td class="vsind" data-ind="'+c.key+'">'+p27Indicador((num===''?0:parseFloat(num)),c.tot26)+'</td>'
               +'</tr>';
       }).join('');
-      var rotados=rows.length-ownedCount;
-      var footLabel='TOTAL — '+ownedCount+' clientes'+(rotados>0?' <span style="font-weight:600;color:#94a3b8;">(+'+rotados+' rotado'+(rotados>1?'s':'')+')</span>':'');
+      var footLabel='TOTAL — '+ownedCount+' clientes';
       foot.innerHTML='<tr><td class="col-name">'+footLabel+'</td>'
           +'<td class="num y24">'+p27fmt(tot.y24)+'</td><td class="num y25">'+p27fmt(tot.y25)+'</td>'
           +'<td class="num e26">'+p27fmt(tot.s)+'</td><td class="num e26">'+p27fmt(tot.m)+'</td><td class="num e26">'+p27fmt(tot.t)+'</td><td class="num e26">'+p27fmt(tot.o)+'</td>'
@@ -357,8 +351,8 @@
       var tot26=parseFloat(el.getAttribute('data-tot26'))||0;
       var indTd=el.parentNode.nextElementSibling;
       if(indTd) indTd.innerHTML=p27Indicador((v===''?0:v),tot26);
-      // totales (solo clientes propios; los rotados no suman)
-      var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){ if(c.owned) real26+=c.tot26;});
+      // totales (toda la cartera del maestro de este comercial)
+      var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){ real26+=c.tot26;});
       var ft=document.getElementById('p27FootTotal'); if(ft)ft.textContent=p27fmt(p27sumDraft(repre));
       var fi=document.getElementById('p27FootInd'); if(fi)fi.innerHTML=p27Indicador(p27sumDraft(repre),real26);
       updatePresu27Kpis(repre,real26);
@@ -395,7 +389,6 @@
               var k=String(r.key);
               if(k.indexOf('__')===0){ if(k==='__CONFIRMADO__') presu27Confirmado[repre]=true; return; }
               if(!p27KeyOK(repre,k)) return;
-              if(!p27EsDueno(repre,k)) return;   // cliente rotado: no se presupuesta acá
               var tn=parseFloat(r.tn); if(isNaN(tn)) return;
               presu27Draft[repre][k]=tn;
               var inp=document.querySelector('.presu27-input[data-key="'+k.replace(/"/g,'')+'"]');
@@ -406,7 +399,7 @@
                   if(indTd) indTd.innerHTML=p27Indicador(tn, parseFloat(inp.getAttribute('data-tot26'))||0);
               }
           });
-          var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){ if(c.owned) real26+=c.tot26;});
+          var rows=buildPresu2027Rows(repre);var real26=0;rows.forEach(function(c){ real26+=c.tot26;});
           var ft=document.getElementById('p27FootTotal'); if(ft)ft.textContent=p27fmt(p27sumDraft(repre));
           var fi=document.getElementById('p27FootInd'); if(fi)fi.innerHTML=p27Indicador(p27sumDraft(repre),real26);
           updatePresu27Kpis(repre,real26);
@@ -455,7 +448,7 @@
       var cumpl=presup26>0?(real26/presup26*100):0;
       document.getElementById('p27Total').innerText=Math.round(total27).toLocaleString('de-DE')+' Tn';
       var d=presu27Draft[repre]||{};var n=Object.keys(d).filter(function(k){return d[k]>0;}).length;
-      var totalRows=repre?buildPresu2027Rows(repre).filter(function(c){return c.owned;}).length:0;
+      var totalRows=repre?buildPresu2027Rows(repre).length:0;
       document.getElementById('p27Count').innerText=n+' de '+totalRows+' clientes cargados';
       document.getElementById('p27Real26').innerText=Math.round(real26).toLocaleString('de-DE')+' Tn';
       document.getElementById('p27Cumpl').innerText='Presup 2026: '+Math.round(presup26).toLocaleString('de-DE')+' ('+cumpl.toFixed(1)+'%)';
@@ -519,7 +512,6 @@
           if(!(d.v||d.cuitLimpio))return; var rep=normalize(d.r); if(!rep)return;
           if(!p27ClienteOK(rep,d))return;
           var key=d.cuitLimpio?'CUIT_'+d.cuitLimpio:'NAME_'+d.v;
-          if(!p27EsDueno(rep,key))return;   // cliente rotado: no cuenta para este comercial
           if(!per[rep])per[rep]={cl:{},vol26:0};
           if(!per[rep].cl[key])per[rep].cl[key]={hist:0,v26:0};
           if(d.e==='2024'||d.e==='2025'||d.e==='2026'){ per[rep].cl[key].hist+=d.vol; if(d.e==='2026'){per[rep].cl[key].v26+=d.vol; per[rep].vol26+=d.vol;} }
@@ -529,13 +521,13 @@
           var rep=normalize(r.repre); if(!rep)return; if(!sv[rep])sv[rep]={loaded:{},tn:0,conf:false};
           var k=String(r.key); if(k.indexOf('__')===0){ if(k==='__CONFIRMADO__')sv[rep].conf=true; return; }
           if(!p27KeyOK(rep,k))return;
-          if(!p27EsDueno(rep,k))return;   // guardado de un cliente rotado: no cuenta
           var tn=parseFloat(r.tn)||0; sv[rep].loaded[k]=tn; sv[rep].tn+=tn;
       });
       return listaRepres().map(function(rep){
           var rk=normalize(rep);
           var p=per[rk]||{cl:{},vol26:0}; var s=sv[rk]||{loaded:{},tn:0,conf:false};
-          var M=Object.keys(p.cl).filter(function(k){return p.cl[k].hist>0;}).length;
+          // Total de clientes a presupuestar = la cartera del maestro de ese comercial.
+          var M=(typeof MAESTRO_BY_REPRE!=='undefined'&&MAESTRO_BY_REPRE[rk])?MAESTRO_BY_REPRE[rk].length:0;
           var N=Object.keys(s.loaded).length;
           var cov=0; Object.keys(s.loaded).forEach(function(k){ if(p.cl[k])cov+=p.cl[k].v26; });
           var cobertura = p.vol26>0 ? (cov/p.vol26*100) : 0;
