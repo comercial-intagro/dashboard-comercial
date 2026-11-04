@@ -14,7 +14,9 @@
 
   var IC_CSS = `#icTable { width:100%; border-collapse:separate; border-spacing:0; font-family:'Inter',system-ui,-apple-system,sans-serif; }
         #icTable th, #icTable td { padding:8px 10px; font-size:0.72rem; vertical-align:middle; }
-        #icTable thead th { background:#f8fafc; color:#475569; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; font-size:0.61rem; border-bottom:1px solid #e2e8f0; position:sticky; top:0; z-index:2; }
+        #icTable thead th { background:#f8fafc; color:#475569; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; font-size:0.61rem; border-bottom:1px solid #e2e8f0; position:sticky; top:0; z-index:2; cursor:pointer; user-select:none; }
+        #icTable thead th:hover { background:#eef2f6; color:#0f172a; }
+        .ic-sort { font-size:0.72rem; color:var(--primary); margin-left:2px; }
         #icTable tbody td { border-bottom:1px solid #f1f5f9; color:#1e293b; }
         #icTable tbody tr:nth-child(even) { background:#fafbfc; }
         #icTable tbody tr:hover { background:#f0fdf4; }
@@ -61,16 +63,16 @@
             <div class="modal-table-container">
                 <table class="budget-table" id="icTable">
                     <thead><tr>
-                        <th class="col-name">Cliente prospecto</th>
-                        <th class="col-com">Comercial</th>
-                        <th class="num">2022</th>
-                        <th class="num">2023</th>
-                        <th class="num">2024</th>
-                        <th class="num">2025</th>
-                        <th class="num">2026</th>
-                        <th class="num e27">Ej. 2027</th>
-                        <th class="num presu">Presup. 2027</th>
-                        <th class="num">% Cumpl.</th>
+                        <th class="col-name" onclick="icSortBy('nombre')">Cliente prospecto <span class="ic-sort" data-c="nombre"></span></th>
+                        <th class="col-com" onclick="icSortBy('comercial')">Comercial <span class="ic-sort" data-c="comercial"></span></th>
+                        <th class="num" onclick="icSortBy('v22')">2022 <span class="ic-sort" data-c="v22"></span></th>
+                        <th class="num" onclick="icSortBy('v23')">2023 <span class="ic-sort" data-c="v23"></span></th>
+                        <th class="num" onclick="icSortBy('v24')">2024 <span class="ic-sort" data-c="v24"></span></th>
+                        <th class="num" onclick="icSortBy('v25')">2025 <span class="ic-sort" data-c="v25"></span></th>
+                        <th class="num" onclick="icSortBy('v26')">2026 <span class="ic-sort" data-c="v26"></span></th>
+                        <th class="num e27" onclick="icSortBy('v27')">Ej. 2027 <span class="ic-sort" data-c="v27"></span></th>
+                        <th class="num presu" onclick="icSortBy('presup')">Presup. 2027 <span class="ic-sort" data-c="presup"></span></th>
+                        <th class="num" onclick="icSortBy('cumpl')">% Cumpl. <span class="ic-sort" data-c="cumpl"></span></th>
                     </tr></thead>
                     <tbody id="icBody"></tbody>
                     <tfoot id="icFoot"></tfoot>
@@ -150,7 +152,49 @@
       return '<span class="ic-cumpl" style="color:'+col+';">'+c.toFixed(0)+'%</span>';
   }
 
-  var _icRows=[];   // cache para el filtro
+  var _icRows=[];            // cache de filas (para filtro y orden)
+  var icSortCol='v26';       // columna de orden actual
+  var icSortAsc=false;       // dirección (false = desc)
+
+  function icRowHtml(r){
+      return '<tr data-f="'+(r.nombre+' '+r.comercial).toUpperCase().replace(/"/g,'')+'">'
+          +'<td class="col-name" title="'+r.nombre+'">'+r.nombre+'</td>'
+          +'<td class="col-com" title="'+r.comercial+'">'+r.comercial+'</td>'
+          +'<td class="num">'+icFmt(r.v22)+'</td>'
+          +'<td class="num">'+icFmt(r.v23)+'</td>'
+          +'<td class="num">'+icFmt(r.v24)+'</td>'
+          +'<td class="num">'+icFmt(r.v25)+'</td>'
+          +'<td class="num">'+icFmt(r.v26)+'</td>'
+          +'<td class="num e27">'+icFmt(r.v27)+'</td>'
+          +'<td class="num presu">'+icFmt(r.presup)+'</td>'
+          +'<td class="num">'+icCumplHtml(r.cumpl)+'</td>'
+          +'</tr>';
+  }
+
+  function icPaintBody(){
+      var body=document.getElementById('icBody'); if(!body) return;
+      if(_icRows.length===0){ body.innerHTML='<tr><td colspan="10" style="text-align:center;padding:18px;color:#94a3b8;font-weight:600;">No hay clientes Habilitado Tarnet.</td></tr>'; return; }
+      var col=icSortCol, asc=icSortAsc;
+      var esTexto=(col==='nombre'||col==='comercial');
+      var rows=_icRows.slice().sort(function(a,b){
+          var va=a[col], vb=b[col];
+          if(esTexto){ va=(va||'').toUpperCase(); vb=(vb||'').toUpperCase(); if(va<vb)return asc?-1:1; if(va>vb)return asc?1:-1; return 0; }
+          va=(va==null?-1:va); vb=(vb==null?-1:vb);   // % Cumpl. null -> al fondo
+          return asc?(va-vb):(vb-va);
+      });
+      body.innerHTML=rows.map(icRowHtml).join('');
+      // indicador de orden en el encabezado
+      var spans=document.querySelectorAll('#icTable thead .ic-sort');
+      for(var i=0;i<spans.length;i++){ var c=spans[i].getAttribute('data-c'); spans[i].innerHTML=(c===col)?(asc?'▲':'▼'):''; }
+      icFilter();
+  }
+
+  function icSortBy(col){
+      if(icSortCol===col){ icSortAsc=!icSortAsc; }
+      else { icSortCol=col; icSortAsc=(col==='nombre'||col==='comercial'); }  // texto asc, números desc
+      icPaintBody();
+  }
+
   function icRender(){
       var body=document.getElementById('icBody');
       var foot=document.getElementById('icFoot');
@@ -159,22 +203,7 @@
       icLoadPresupuestos().then(function(presupMap){
           _icRows=icBuildRows(presupMap);
           var tot={v22:0,v23:0,v24:0,v25:0,v26:0,v27:0,presup:0};
-          body.innerHTML=_icRows.map(function(r){
-              tot.v22+=r.v22;tot.v23+=r.v23;tot.v24+=r.v24;tot.v25+=r.v25;tot.v26+=r.v26;tot.v27+=r.v27;tot.presup+=r.presup;
-              return '<tr data-f="'+(r.nombre+' '+r.comercial).toUpperCase().replace(/"/g,'')+'">'
-                  +'<td class="col-name" title="'+r.nombre+'">'+r.nombre+'</td>'
-                  +'<td class="col-com" title="'+r.comercial+'">'+r.comercial+'</td>'
-                  +'<td class="num">'+icFmt(r.v22)+'</td>'
-                  +'<td class="num">'+icFmt(r.v23)+'</td>'
-                  +'<td class="num">'+icFmt(r.v24)+'</td>'
-                  +'<td class="num">'+icFmt(r.v25)+'</td>'
-                  +'<td class="num">'+icFmt(r.v26)+'</td>'
-                  +'<td class="num e27">'+icFmt(r.v27)+'</td>'
-                  +'<td class="num presu">'+icFmt(r.presup)+'</td>'
-                  +'<td class="num">'+icCumplHtml(r.cumpl)+'</td>'
-                  +'</tr>';
-          }).join('');
-          if(_icRows.length===0) body.innerHTML='<tr><td colspan="10" style="text-align:center;padding:18px;color:#94a3b8;font-weight:600;">No hay clientes Habilitado Tarnet.</td></tr>';
+          _icRows.forEach(function(r){ tot.v22+=r.v22;tot.v23+=r.v23;tot.v24+=r.v24;tot.v25+=r.v25;tot.v26+=r.v26;tot.v27+=r.v27;tot.presup+=r.presup; });
           var cumplTot=(tot.presup>0)?(tot.v27/tot.presup*100):null;
           foot.innerHTML='<tr><td class="col-name">TOTAL — '+_icRows.length+' clientes</td><td class="col-com"></td>'
               +'<td class="num">'+icFmt(tot.v22)+'</td><td class="num">'+icFmt(tot.v23)+'</td><td class="num">'+icFmt(tot.v24)+'</td>'
@@ -184,7 +213,7 @@
           var cnt=document.getElementById('icCounters');
           if(cnt) cnt.innerHTML='<div class="ic-counter"><div class="ic-counter-n">'+_icRows.length+'</div><div class="ic-counter-l">Clientes prospecto</div></div>'
               +'<div class="ic-counter"><div class="ic-counter-n">'+icFmt(tot.presup)+'</div><div class="ic-counter-l">Presupuesto 2027 (tn)</div></div>';
-          icFilter();
+          icPaintBody();
       });
   }
 
@@ -205,6 +234,7 @@
 
   window.openInteligencia = openInteligencia;
   window.icFilter = icFilter;
+  window.icSortBy = icSortBy;
 
   function icInit(){
       if(document.getElementById('inteligenciaModal')) return;
