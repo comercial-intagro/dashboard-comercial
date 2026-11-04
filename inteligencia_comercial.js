@@ -120,11 +120,19 @@
       }).catch(function(){ return {}; });
   }
 
+  // Compradores que NO cuentan como volumen (canje grano x insumos). Lista extensible:
+  // agregar el CUIT (a dígitos) de cada comprador a excluir. Solo aplica en Inteligencia Comercial.
+  var IC_COMPRADORES_EXCLUIDOS = ['30503811061'];   // Bayer S.A. (30-50381106-1)
+
   // Volumen por ejercicio TOTAL del cliente (todos los comerciales), desde las operaciones.
+  // Se descuentan las operaciones cuyo comprador está en IC_COMPRADORES_EXCLUIDOS (canje):
+  // si un cliente solo tiene ese tipo de operación, queda en cero -> pasa a Prospecto.
   function icVolMap(){
       var m={};
       DB.forEach(function(d){
           var cuit=String(d.cuitLimpio||'').replace(/\D/g,''); if(!cuit) return;
+          var cComp=String(d.cuitComp||'').replace(/\D/g,'');
+          if(cComp && IC_COMPRADORES_EXCLUIDOS.indexOf(cComp)>=0) return;   // comprador excluido: no suma
           if(!m[cuit]) m[cuit]={'2022':0,'2023':0,'2024':0,'2025':0,'2026':0,'2027':0};
           if(m[cuit][d.e]!==undefined) m[cuit][d.e]+=d.vol;
       });
