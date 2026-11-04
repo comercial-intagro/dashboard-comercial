@@ -417,6 +417,12 @@
            y reduce el espacio vertical disponible; la cartera se ajusta sola por flex.
            Esta clase permite un ajuste fino adicional si se necesita. */
         .client-analysis-box.cartera-min { }
+        /* Prospecto (HABILITADO TARNET): fila en verde claro + asterisco. */
+        .client-table tbody tr.client-prospecto { background: #ecfdf3; }
+        .client-table tbody tr.client-prospecto:hover { background: #d9f6e4; }
+        .client-table tbody tr.client-prospecto.active { background: #c3f0d4; }
+        .prosp-star { color: var(--primary); font-weight: 900; }
+        .cartera-subtitle { font-size: 0.58rem; font-weight: 600; color: #64748b; margin-top: 1px; }
         .client-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         
         .client-table th { position: sticky; top: 0; background: #f8fafc; color: #64748b; font-size: 0.66rem; text-transform: uppercase; padding: 9px 6px; font-weight: 700; z-index: 10; border-bottom: 1px solid var(--border-light); text-align: right; cursor: pointer; transition: background 0.2s, color 0.2s; user-select: none; }
@@ -1345,9 +1351,12 @@
 
                     <div class="client-analysis-box">
                         <div class="client-header">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <i class="ri-contacts-book-2-line" style="font-size:1rem;"></i> 
-                                EVOLUCIÓN DE CARTERA (CLIENTES)
+                            <div style="display:flex; flex-direction:column; gap:1px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <i class="ri-contacts-book-2-line" style="font-size:1rem;"></i>
+                                    EVOLUCIÓN DE CARTERA (CLIENTES)
+                                </div>
+                                <div class="cartera-subtitle"><span class="prosp-star">*</span> Cliente Prospecto</div>
                             </div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <div style="position:relative;">
@@ -1654,6 +1663,10 @@
         // Fase 2 - multi-usuario: rol y representante del usuario actual
         let USER_ROL = 'GERENCIAL';
         let USER_REPRESENTANTE = '';
+        // Maestro de clientes (fuente de verdad cliente -> comercial). Se arma del payload.
+        let MAESTRO_BY_CUIT = {};        // cuit -> {cuit,nombre,comercial,comercialN,esProsp}
+        let MAESTRO_BY_REPRE = {};       // comercial normalizado -> [entradas del maestro]
+        let CARTERA_FOCUS_REPRE = null;  // comercial en foco en la grilla de cartera (null = toda la empresa)
         let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
         let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría (Exportacion/Molino/Consumo/Otros)
         let DEST_ZONA = {}; // mapa descripcion destino normalizada -> zona
@@ -2040,6 +2053,25 @@
                             var desc = normDestino(par[0]);
                             var zona = String(par[1]||'').trim();
                             if (desc && zona) DEST_ZONA[desc] = zona;
+                        });
+                    }
+                    // Maestro de clientes: llega como [cuit, nombre, comercial, esProsp(1/0)].
+                    // Arma el mapa por CUIT (para marcar prospecto) y por comercial normalizado
+                    // (para inyectar la cartera completa de cada comercial en la grilla).
+                    MAESTRO_BY_CUIT = {};
+                    MAESTRO_BY_REPRE = {};
+                    if (payload.maestro && Array.isArray(payload.maestro)) {
+                        payload.maestro.forEach(function(row){
+                            var cuit = String(row[0]||'').replace(/\D/g,'');
+                            if (!cuit) return;
+                            var nombre = String(row[1]||'').trim();
+                            var comercial = String(row[2]||'').trim();
+                            var esProsp = (row[3] === 1 || row[3] === '1' || row[3] === true);
+                            var comN = normalize(comercial);
+                            var ent = { cuit: cuit, nombre: nombre, comercial: comercial, comercialN: comN, esProsp: esProsp };
+                            MAESTRO_BY_CUIT[cuit] = ent;
+                            if (!MAESTRO_BY_REPRE[comN]) MAESTRO_BY_REPRE[comN] = [];
+                            MAESTRO_BY_REPRE[comN].push(ent);
                         });
                     }
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
@@ -3120,12 +3152,33 @@ ${totalsRow}
                 }
             });
 
+            // Inyectar la cartera del maestro del comercial en foco: clientes que le están
+            // asignados y que quizá no operaron (para verlos y poder presupuestarlos). El
+            // volumen NO se toca -> sigue saliendo de las operaciones (cada comercial ve lo
+            // que hizo él). Solo cuando hay un comercial puntual en foco (no en la vista global).
+            if (CARTERA_FOCUS_REPRE && MAESTRO_BY_REPRE[CARTERA_FOCUS_REPRE]) {
+                MAESTRO_BY_REPRE[CARTERA_FOCUS_REPRE].forEach(function(ent){
+                    var gk = 'CUIT_' + ent.cuit;
+                    if (!clientMap[gk]) {
+                        clientMap[gk] = { '2022': 0, '2023': 0, '2024': 0, '2025': 0, '2026': 0 };
+                        cuitToName[gk] = ent.nombre;
+                        clientRepMap[gk] = CARTERA_FOCUS_REPRE;
+                    }
+                });
+            }
+
             let clients = Object.keys(clientMap).map(k => {
                 let data = clientMap[k];
-                data.id = k; 
+                data.id = k;
                 data.name = cuitToName[k] || (k.startsWith('NAME_') ? k.replace('NAME_', '') : k);
                 data.rep = clientRepMap[k];
-                
+
+                // Marca de prospecto (verde + *) y pertenencia al maestro del comercial en foco.
+                let cuitOnly = (k.indexOf('CUIT_') === 0) ? k.slice(5) : '';
+                let mEnt = cuitOnly ? MAESTRO_BY_CUIT[cuitOnly] : null;
+                data.esProsp = !!(mEnt && mEnt.esProsp);
+                data.isMaestroFocus = !!(CARTERA_FOCUS_REPRE && mEnt && mEnt.comercialN === CARTERA_FOCUS_REPRE);
+
                 let repTotal26 = repTotals2026[data.rep] || 0;
                 data.share = (repTotal26 > 0 && data['2026'] > 0) ? (data['2026'] / repTotal26) * 100 : 0;
 
@@ -3184,9 +3237,12 @@ ${totalsRow}
 
             clients.forEach(c => {
                 let sumCheck = c['2023'] + c['2024'] + c['2025'] + c['2026'];
-                if(sumCheck === 0) return; 
-                
+                // Se ocultan los clientes sin volumen, SALVO que sean cartera del maestro del
+                // comercial en foco (esos se muestran aunque no hayan operado, para presupuestarlos).
+                if(sumCheck === 0 && !c.isMaestroFocus) return;
+
                 let tr = document.createElement('tr');
+                if (c.esProsp) tr.classList.add('client-prospecto'); // prospecto: sombreado verde + *
                 if (activeVendorId === c.id) {
                     tr.classList.add('active');
                     if (!isSortAction) setTimeout(() => { tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
@@ -3206,8 +3262,14 @@ ${totalsRow}
                 
                 let tdName = document.createElement('td');
                 tdName.className = 'client-name-cell';
-                tdName.innerText = c.name;
-                tdName.title = c.name + (c.rep ? ` (Rep: ${c.rep})` : '');
+                tdName.textContent = c.name;
+                if (c.esProsp) {
+                    let st = document.createElement('span');
+                    st.className = 'prosp-star';
+                    st.textContent = ' *';
+                    tdName.appendChild(st);
+                }
+                tdName.title = c.name + (c.esProsp ? ' (Cliente Prospecto)' : '') + (c.rep ? ` (Rep: ${c.rep})` : '');
                 tr.appendChild(tdName);
 
                 targetYears.forEach(y => {
@@ -3486,7 +3548,7 @@ ${totalsRow}
             var thShare = document.getElementById('th-share');
             if (thShare) thShare.innerHTML = 'Share Rep. <span></span>';
             var clientHeader = document.querySelector('.client-header > div:first-child');
-            if (clientHeader) clientHeader.innerHTML = '<i class="ri-contacts-book-2-line" style="font-size:1rem;"></i> EVOLUCIÓN DE CARTERA (CLIENTES)';
+            if (clientHeader) clientHeader.innerHTML = '<div style="display:flex; align-items:center; gap:8px;"><i class="ri-contacts-book-2-line" style="font-size:1rem;"></i> EVOLUCIÓN DE CARTERA (CLIENTES)</div><div class="cartera-subtitle"><span class="prosp-star">*</span> Cliente Prospecto</div>';
         }
 
         // Renderiza las tarjetas centrales en modo comprador (sub-paso 1).
@@ -4208,6 +4270,10 @@ ${totalsRow}
             }
 
             updateDashboard(context);
+            // Comercial en foco para la cartera: si hay un repre filtrado, se inyecta su
+            // cartera completa del maestro (incluye los que no operaron). En "Toda la Empresa"
+            // (fr === 'all') no se inyecta, para no inflar la vista global.
+            CARTERA_FOCUS_REPRE = (fr === 'all') ? null : normFr;
             generateClientTable(contextClientTable);
 
             document.getElementById('kTargetLbl').innerText=`OBJETIVO DIARIO`;
