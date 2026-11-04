@@ -5387,7 +5387,7 @@ ${totalsRow}
         function toggleModal(id, show) {
             // Seguridad Fase 2: los modales de mercado/herramientas son solo para gerenciales.
             // Si un no-gerencial intenta abrir uno (incluso por consola), se bloquea.
-            const modalesGerenciales = ['budgetModal','historyModal','canjModal','sioModal','prodNacModal','categModal'];
+            const modalesGerenciales = ['budgetModal','historyModal','canjModal','sioModal','prodNacModal','categModal','inteligenciaModal'];
             if (show && USER_ROL !== 'GERENCIAL' && modalesGerenciales.indexOf(id) !== -1) {
                 return;
             }
@@ -8630,5 +8630,6 @@ ${totalsRow}
 
     </script>
     <script src="presupuesto2027.js"></script>
+    <script src="inteligencia_comercial.js"></script>
 </body>
 </html>
