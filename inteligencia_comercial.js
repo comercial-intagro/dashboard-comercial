@@ -37,6 +37,10 @@
         .ic-counter { background:#f8fafc; border:1px solid #eef1f4; border-radius:10px; padding:8px 14px; text-align:center; min-width:120px; }
         .ic-counter-n { font-size:1.4rem; font-weight:900; line-height:1; color:var(--primary); }
         .ic-counter-l { font-size:0.62rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; }
+        .ic-counter-click { cursor:pointer; transition:border-color 0.15s, background 0.15s; }
+        .ic-counter-click:hover { border-color:var(--primary); }
+        .ic-counter-active { background:var(--primary); border-color:var(--primary); }
+        .ic-counter-active .ic-counter-n, .ic-counter-active .ic-counter-l { color:#fff; }
         .ic-search-wrap { position:relative; }
         .ic-search-wrap i { position:absolute; left:9px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.8rem; }
         #icSearch { padding:7px 12px 7px 28px; border:1px solid #cbd5e1; border-radius:50px; font-size:0.74rem; font-family:inherit; min-width:220px; }
@@ -155,9 +159,10 @@
   var _icRows=[];            // cache de filas (para filtro y orden)
   var icSortCol='v26';       // columna de orden actual
   var icSortAsc=false;       // dirección (false = desc)
+  var icGroupFilter=null;    // null | 'clientes' (con volumen) | 'prospectos' (sin volumen)
 
   function icRowHtml(r){
-      return '<tr data-f="'+(r.nombre+' '+r.comercial).toUpperCase().replace(/"/g,'')+'">'
+      return '<tr data-f="'+(r.nombre+' '+r.comercial).toUpperCase().replace(/"/g,'')+'" data-g="'+(r.tieneVol?'cli':'pro')+'">'
           +'<td class="col-name" title="'+r.nombre+'">'+r.nombre+'</td>'
           +'<td class="col-com" title="'+r.comercial+'">'+r.comercial+'</td>'
           +'<td class="num">'+icFmt(r.v22)+'</td>'
@@ -200,10 +205,17 @@
       var foot=document.getElementById('icFoot');
       body.innerHTML='<tr><td colspan="10" style="text-align:center;padding:18px;color:#94a3b8;font-weight:600;">Cargando…</td></tr>';
       foot.innerHTML='';
+      icGroupFilter=null;   // cada apertura arranca sin filtro de grupo
       icLoadPresupuestos().then(function(presupMap){
           _icRows=icBuildRows(presupMap);
           var tot={v22:0,v23:0,v24:0,v25:0,v26:0,v27:0,presup:0};
-          _icRows.forEach(function(r){ tot.v22+=r.v22;tot.v23+=r.v23;tot.v24+=r.v24;tot.v25+=r.v25;tot.v26+=r.v26;tot.v27+=r.v27;tot.presup+=r.presup; });
+          var nCli=0, nPro=0;
+          _icRows.forEach(function(r){
+              tot.v22+=r.v22;tot.v23+=r.v23;tot.v24+=r.v24;tot.v25+=r.v25;tot.v26+=r.v26;tot.v27+=r.v27;tot.presup+=r.presup;
+              // "cliente" = cuenta operativa (hizo volumen alguna vez); "prospecto" = sin volumen aún
+              r.tieneVol = (r.v22+r.v23+r.v24+r.v25+r.v26+r.v27) > 0;
+              if(r.tieneVol) nCli++; else nPro++;
+          });
           var cumplTot=(tot.presup>0)?(tot.v27/tot.presup*100):null;
           foot.innerHTML='<tr><td class="col-name">TOTAL — '+_icRows.length+' clientes</td><td class="col-com"></td>'
               +'<td class="num">'+icFmt(tot.v22)+'</td><td class="num">'+icFmt(tot.v23)+'</td><td class="num">'+icFmt(tot.v24)+'</td>'
@@ -211,7 +223,11 @@
               +'<td class="num e27">'+icFmt(tot.v27)+'</td><td class="num presu">'+icFmt(tot.presup)+'</td>'
               +'<td class="num">'+icCumplHtml(cumplTot)+'</td></tr>';
           var cnt=document.getElementById('icCounters');
-          if(cnt) cnt.innerHTML='<div class="ic-counter"><div class="ic-counter-n">'+_icRows.length+'</div><div class="ic-counter-l">Clientes prospecto</div></div>'
+          if(cnt) cnt.innerHTML=
+                '<div class="ic-counter ic-counter-click" id="icBoxCli" onclick="icSetGroup(\'clientes\')" title="Cuentas operativas (hicieron volumen). Clic para filtrar.">'
+                  +'<div class="ic-counter-n">'+nCli+'</div><div class="ic-counter-l">Clientes (con volumen)</div></div>'
+              +'<div class="ic-counter ic-counter-click" id="icBoxPro" onclick="icSetGroup(\'prospectos\')" title="Prospectos sin volumen aún. Clic para filtrar.">'
+                  +'<div class="ic-counter-n">'+nPro+'</div><div class="ic-counter-l">Prospectos (sin volumen)</div></div>'
               +'<div class="ic-counter"><div class="ic-counter-n">'+icFmt(tot.presup)+'</div><div class="ic-counter-l">Presupuesto 2027 (tn)</div></div>';
           icPaintBody();
       });
@@ -222,8 +238,20 @@
       var trs=document.querySelectorAll('#icBody tr[data-f]');
       for(var i=0;i<trs.length;i++){
           var f=trs[i].getAttribute('data-f')||'';
-          trs[i].style.display = (!q || f.indexOf(q)>=0) ? '' : 'none';
+          var g=trs[i].getAttribute('data-g')||'';
+          var okQ = (!q || f.indexOf(q)>=0);
+          var okG = (!icGroupFilter) || (icGroupFilter==='clientes' && g==='cli') || (icGroupFilter==='prospectos' && g==='pro');
+          trs[i].style.display = (okQ && okG) ? '' : 'none';
       }
+  }
+
+  // Filtro por grupo desde los recuadros. Vuelve a clickear el activo = limpia el filtro.
+  function icSetGroup(g){
+      icGroupFilter = (icGroupFilter===g) ? null : g;
+      var cli=document.getElementById('icBoxCli'), pro=document.getElementById('icBoxPro');
+      if(cli) cli.classList.toggle('ic-counter-active', icGroupFilter==='clientes');
+      if(pro) pro.classList.toggle('ic-counter-active', icGroupFilter==='prospectos');
+      icFilter();
   }
 
   function openInteligencia(){
@@ -235,6 +263,7 @@
   window.openInteligencia = openInteligencia;
   window.icFilter = icFilter;
   window.icSortBy = icSortBy;
+  window.icSetGroup = icSetGroup;
 
   function icInit(){
       if(document.getElementById('inteligenciaModal')) return;
