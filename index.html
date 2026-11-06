@@ -1977,10 +1977,14 @@
         // Recibe un ID Token (JWT) que vamos a mandar al Apps Script para verificar.
         function onGoogleSignIn(response) {
             if (!response || !response.credential) {
+                if (window.__dashLoaded) return; // refresh silencioso fallido: seguimos, el aviso salta si una consulta falla
                 showCriticalError("No se recibió el token de Google. Refrescá e intentá de nuevo.");
                 return;
             }
             __googleIdToken = response.credential;
+            // Si el dashboard ya estaba cargado, esto fue una renovación en segundo plano del
+            // token: solo actualizamos __googleIdToken y NO recargamos todo.
+            if (window.__dashLoaded) return;
             // Restaurar el loader visual y arrancar la carga de datos
             const errorMsg = document.getElementById('errorMsg');
             if (errorMsg) { errorMsg.style.display = "none"; errorMsg.innerHTML = ""; }
@@ -2009,6 +2013,17 @@
                     if (!Array.isArray(payload.data) || payload.data.length === 0) {
                         showCriticalError("El servidor respondió, pero no hay datos.");
                         return;
+                    }
+                    // Dashboard cargado OK. A partir de acá, renovamos el token de Google en
+                    // segundo plano para que no se venza al pasar una hora (lo que hacía fallar
+                    // la carga del presupuesto / inteligencia comercial sin avisar).
+                    window.__dashLoaded = true;
+                    if (!window.__tokenRefreshTimer) {
+                        window.__tokenRefreshTimer = setInterval(function() {
+                            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                                try { google.accounts.id.prompt(); } catch (e) {}
+                            }
+                        }, 45 * 60 * 1000); // cada 45 minutos (el token dura ~60)
                     }
                     // Rol del usuario (Fase 2 - multi-usuario). Default GERENCIAL por compatibilidad.
                     USER_ROL = (payload.rol || 'GERENCIAL').toString().toUpperCase();

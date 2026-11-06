@@ -381,7 +381,16 @@
       presu27Confirmado[repre]=false;
       p27Jsonp({action:'presu2027_load',repre:repre}).then(function(resp){
           if(resp){ if(resp.lockDate!=null)p27LockDate=resp.lockDate; if(resp.locked!=null)p27Locked=!!resp.locked; }
-          if(!resp||!resp.ok||!resp.rows){ p27ApplyLockUI(); return; }
+          // Safety net: si el backend rechazó por sesión/token vencido, avisar en vez de mostrar 0.
+          if(resp && resp.ok===false){
+              var em=String(resp.error||'');
+              if(/sesi|token|expir|inv[aá]lid/i.test(em)){
+                  var bodyEl=document.getElementById('presu27Body');
+                  if(bodyEl) bodyEl.innerHTML='<tr><td colspan="10" style="text-align:center;padding:18px;color:#b91c1c;font-weight:700;">Tu sesión expiró. Refrescá la página (F5) y volvé a abrir el presupuesto.</td></tr>';
+              }
+              p27ApplyLockUI(); return;
+          }
+          if(!resp||!resp.rows){ p27ApplyLockUI(); return; }
           if(document.getElementById('presu27Rep').value!==repre) return;
           if(!presu27Draft[repre])presu27Draft[repre]={};
           resp.rows.forEach(function(r){
