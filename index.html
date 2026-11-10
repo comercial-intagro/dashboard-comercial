@@ -883,7 +883,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-header-top">
-                    <div><h2 style="color:var(--primary);font-weight:800;font-size:1.2rem;">Presupuesto & Gestión 2026</h2></div>
+                    <div><h2 style="color:var(--primary);font-weight:800;font-size:1.2rem;">Proyección Objetivos</h2></div>
                     <div class="close-btn" onclick="toggleModal('budgetModal',false)"><i class="ri-close-line"></i></div>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px;">
@@ -1205,7 +1205,7 @@
                 </button>
                 <div class="tools-section" id="toolsSection">
                     <label class="filter-label">HERRAMIENTAS</label>
-                    <button class="btn-sec" onclick="toggleModal('budgetModal',true)"><i class="ri-bar-chart-2-fill"></i> Presupuesto 2026</button>
+                    <button class="btn-sec" onclick="toggleModal('budgetModal',true)"><i class="ri-bar-chart-2-fill"></i> Proyección Objetivos</button>
                     <button class="btn-sec" onclick="toggleModal('historyModal',true)"><i class="ri-grid-fill"></i> Vol Histórico Intagro</button>
                     <button class="btn-sec" onclick="toggleModal('canjModal',true)"><i class="ri-exchange-funds-fill"></i> Canjeadores</button>
                     <button class="btn-sec" onclick="toggleModal('sioModal',true)"><i class="ri-line-chart-fill"></i> Histórico SIO Granos</button>
@@ -1689,7 +1689,7 @@
         let CATEG_ACTIVA = 'all'; // categoría clickeada en la vista compradora (all/Exportacion/Molino/Consumo/Otros)
         let selectedYear='all', activeProfileFilter='all', maxDateInDB=null, dynamicCurrentMonth=3;
         // Estado de ordenamiento de la grilla de presupuesto
-        let budgetSortKey = 'target', budgetSortDir = 'desc';
+        let budgetSortKey = 'v26', budgetSortDir = 'desc';
         let lastBudgetReportRows = [];
         let currentChartTab = 'main';
         let lastDashboardData = [];
@@ -2385,8 +2385,8 @@
             activeProfileFilter=filterType;
             document.querySelectorAll('.btn-filter').forEach(b=>b.classList.remove('active'));
             btn.classList.add('active');
-            // Reset orden al default (target desc) al cambiar de perfil
-            budgetSortKey = 'target';
+            // Reset orden al default (volumen 2026 desc) al cambiar de perfil
+            budgetSortKey = 'v26';
             budgetSortDir = 'desc';
             fillBudgetTable();
         }
@@ -2460,14 +2460,15 @@
 
             const headerCols = [
                 { key: 'name',     label: 'Repre/ Comercial', cls: 'col-name', sortable: true,  align: 'left' },
-                { key: 'v23',      label: '2023',             cls: 'col-hist', sortable: true,  align: 'center' },
                 { key: 'v24',      label: '2024',             cls: 'col-hist', sortable: true,  align: 'center' },
                 { key: 'v25',      label: '2025',             cls: 'col-hist', sortable: true,  align: 'center' },
-                { key: 'target',   label: 'Obj 2026',         cls: 'col-obj',  sortable: true,  align: 'right'  },
-                { key: 'real26',   label: 'Real 2026',        cls: 'col-real', sortable: true,  align: 'right'  },
-                { key: 'compl',    label: '% Cumpl',          cls: 'col-perc', sortable: true,  align: 'right'  },
-                { key: 'planYTD',  label: 'Plan Est.',        cls: 'col-plan', sortable: true,  align: 'right', titleAttr: 'Plan estacional acumulado' },
-                { key: 'dev',      label: 'Desvío',           cls: 'col-dev',  sortable: true,  align: 'right', titleAttr: 'Desvío vs Estacionalidad Individual' }
+                { key: 'v26',      label: '2026',             cls: 'col-hist', sortable: true,  align: 'center' },
+                { key: 'obj26',    label: 'Obj. 2026',        cls: 'col-obj',  sortable: true,  align: 'right', titleAttr: 'Objetivo 2026 y % de cumplimiento' },
+                { key: 'obj27',    label: 'OBJ 2027',         cls: 'col-obj',  sortable: true,  align: 'right', titleAttr: 'Objetivo 2027 (sin definir hasta presupuestar)' },
+                { key: 'real27',   label: 'Real 2027',        cls: 'col-real', sortable: true,  align: 'right'  },
+                { key: 'cumpl27',  label: '% Cumpl',          cls: 'col-perc', sortable: true,  align: 'right'  },
+                { key: 'planYTD',  label: 'Plan Est.',        cls: 'col-plan', sortable: true,  align: 'right', titleAttr: 'Plan estacional 2027 acumulado' },
+                { key: 'dev',      label: 'Desvío',           cls: 'col-dev',  sortable: true,  align: 'right', titleAttr: 'Desvío real 2027 vs Plan estacional' }
             ];
             const headerHtml = headerCols.map(col => {
                 const sortAttr = col.sortable ? `class="${col.cls} sortable${budgetSortKey===col.key?' sort-active':''}" data-sort="${col.key}" onclick="sortBudgetTable('${col.key}')"` : `class="${col.cls}"`;
@@ -2490,10 +2491,11 @@
             if(activeProfileFilter!=='all')filteredBudget=budgetData.filter(b=>b.type===activeProfileFilter);
 
             const reportRows=filteredBudget.map(b=>{
-                const r=normalize(b.r);const real26=statsMap[r]?statsMap[r].real:0;
-                const rd=repDataHistory[r]||{'2022':0,'2023':0,'2024':0,'2025':0};
-                const historyRep=DB.filter(d=>d.r===r&&d.e>='2021'&&d.e<='2025');
-                const repHistBase=historyRep.filter(d=>d.e>='2021'&&d.e<='2023').reduce((a,b)=>a+b.vol,0);
+                const r=normalize(b.r);const real27=statsMap[r]?statsMap[r].real:0;
+                const rd=repDataHistory[r]||{'2022':0,'2023':0,'2024':0,'2025':0,'2026':0};
+                const real26=rd['2026']||0;
+                const historyRep=DB.filter(d=>d.r===r&&d.e>='2022'&&d.e<='2026');
+                const repHistBase=historyRep.filter(d=>d.e>='2022'&&d.e<='2024').reduce((a,b)=>a+b.vol,0);
 
                 // % histórico INDIVIDUAL por mes para este repre/comercial
                 let repTotalHist = 0;
@@ -2517,10 +2519,13 @@
                     });
                 }
 
-                const target=b.t;const compliance=target>0?(real26/target)*100:0;
-                const planYTD=target*planPerc;
-                let deviationPerc=0;if(planYTD>0)deviationPerc=((real26/planYTD)*100)-100;else if(real26>0)deviationPerc=100;
-                return{name:b.r,v22:rd['2022'],v23:rd['2023'],v24:rd['2024'],v25:rd['2025'],target:target,real26:real26,compl:compliance,planPerc:planPerc*100,planYTD:planYTD,dev:deviationPerc,usedGlobal:lacksHistory,inactive:!!b.inactive,reserva:!!b.reserva};
+                // Objetivo 2026 = b.t (presupuesto del ejercicio cerrado); % cumpl 2026 contra real 2026
+                const obj26=b.t;const cumpl26=obj26>0?(real26/obj26)*100:0;
+                // Objetivo 2027 = 0 por ahora (hasta presupuestar); % cumpl / plan / desvío 2027 quedan vacíos
+                const obj27=0;const cumpl27=obj27>0?(real27/obj27)*100:0;
+                const planYTD=obj27*planPerc;
+                let deviationPerc=0;if(planYTD>0)deviationPerc=((real27/planYTD)*100)-100;else if(real27>0)deviationPerc=100;
+                return{name:b.r,v24:rd['2024'],v25:rd['2025'],v26:real26,obj26:obj26,cumpl26:cumpl26,obj27:obj27,real27:real27,cumpl27:cumpl27,planPerc:planPerc*100,planYTD:planYTD,dev:deviationPerc,usedGlobal:lacksHistory,inactive:!!b.inactive,reserva:!!b.reserva};
             });
 
             lastBudgetReportRows = reportRows;
@@ -2581,32 +2586,49 @@
                 // Filas especiales: retirados (inactive) o reserva (comerciales nuevos)
                 // No se calcula % Cumpl ni Desvío, se muestran '-' neutros
                 const isSpecial = row.inactive || row.reserva;
+                const hasObj27 = row.obj27 > 0;
 
+                // % Cumplimiento 2027: solo se evalúa cuando hay OBJ 2027 presupuestado
                 let complPill = 'pill-neu';
                 let complHtml;
-                if (isSpecial) {
-                    complHtml = '<span class="col-perc-pill pill-neu" title="No se evalúa">-</span>';
+                if (isSpecial || !hasObj27) {
+                    complHtml = '<span class="col-perc-pill pill-neu" title="Sin OBJ 2027 presupuestado">-</span>';
                 } else {
-                    if (row.target > 0 && row.planPerc > 0) {
-                        const gapPP = row.compl - row.planPerc;
+                    if (row.planPerc > 0) {
+                        const gapPP = row.cumpl27 - row.planPerc;
                         if (gapPP >= 0)         complPill = 'pill-ok';
                         else if (gapPP >= -10)  complPill = 'pill-warn';
                         else                    complPill = 'pill-bad';
-                    } else if (row.target > 0 && row.compl >= 100) {
+                    } else if (row.cumpl27 >= 100) {
                         complPill = 'pill-ok';
                     }
-                    complHtml = `<span class="col-perc-pill ${complPill}" title="Plan Est: ${row.planPerc.toFixed(1)}% | Real: ${row.compl.toFixed(1)}%">${row.compl.toFixed(1)}%</span>`;
+                    complHtml = `<span class="col-perc-pill ${complPill}" title="Plan Est: ${row.planPerc.toFixed(1)}% | Real: ${row.cumpl27.toFixed(1)}%">${row.cumpl27.toFixed(1)}%</span>`;
                 }
 
                 let devHtml;
-                if (isSpecial) {
-                    devHtml = '<span class="col-dev-pill pill-neu" title="No se evalúa">-</span>';
+                if (isSpecial || !hasObj27) {
+                    devHtml = '<span class="col-dev-pill pill-neu" title="Sin OBJ 2027 presupuestado">-</span>';
                 } else {
                     let devPill = 'pill-neu';
                     if (row.dev > 0)      devPill = 'pill-ok';
                     else if (row.dev < 0) devPill = 'pill-bad';
                     const devSign = row.dev > 0 ? '+' : '';
                     devHtml = `<span class="col-dev-pill ${devPill}">${devSign}${row.dev.toFixed(1)}%</span>`;
+                }
+
+                // Celda Obj. 2026: objetivo del ejercicio cerrado + % cumplimiento chico
+                let obj26Html;
+                if (row.obj26 > 0) {
+                    let c26Pill = 'pill-neu';
+                    if (row.cumpl26 >= 100)      c26Pill = 'pill-ok';
+                    else if (row.cumpl26 >= 90)  c26Pill = 'pill-warn';
+                    else                         c26Pill = 'pill-bad';
+                    obj26Html = `<div class="cell-content" style="flex-direction:column;align-items:flex-end;gap:2px;">`
+                        + `<span>${formatN(row.obj26)}</span>`
+                        + `<span class="col-perc-pill ${c26Pill}" style="font-size:9px;padding:0 4px;">${row.cumpl26.toFixed(0)}%</span>`
+                        + `</div>`;
+                } else {
+                    obj26Html = '-';
                 }
 
                 const globalStar = (!isSpecial && row.usedGlobal)
@@ -2621,17 +2643,21 @@
                     nameTag = '<span class="row-tag tag-reserva" title="Reserva de presupuesto para captación de nuevos comerciales">reserva</span>';
                 }
 
-                // Plan estacional: solo se muestra si la fila se evalúa
-                const planCell = isSpecial ? '<span style="color:#cbd5e1;">-</span>' : `${formatN(row.planYTD)}${globalStar}`;
+                // Plan estacional 2027: solo se muestra si hay OBJ 2027 presupuestado
+                const planCell = (isSpecial || !hasObj27) ? '<span style="color:#cbd5e1;">-</span>' : `${formatN(row.planYTD)}${globalStar}`;
+
+                // OBJ 2027: '-' hasta que se presupueste
+                const obj27Cell = hasObj27 ? formatN(row.obj27) : '-';
 
                 const trClass = isSpecial ? ' class="row-special"' : '';
                 html += `<tr${trClass}>`
                     + `<td class="col-name">${row.name}${nameTag}</td>`
-                    + `<td class="col-hist">${getTrendHtml(row.v23,row.v22)}</td>`
-                    + `<td class="col-hist">${getTrendHtml(row.v24,row.v23)}</td>`
+                    + `<td class="col-hist">${getTrendHtml(row.v24,0)}</td>`
                     + `<td class="col-hist">${getTrendHtml(row.v25,row.v24)}</td>`
-                    + `<td class="col-obj">${formatN(row.target)}</td>`
-                    + `<td class="col-real">${formatN(row.real26)}</td>`
+                    + `<td class="col-hist">${getTrendHtml(row.v26,row.v25)}</td>`
+                    + `<td class="col-obj">${obj26Html}</td>`
+                    + `<td class="col-obj">${obj27Cell}</td>`
+                    + `<td class="col-real">${formatN(row.real27)}</td>`
                     + `<td class="col-perc">${complHtml}</td>`
                     + `<td class="col-plan">${planCell}</td>`
                     + `<td class="col-dev">${devHtml}</td>`
