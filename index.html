@@ -1242,7 +1242,7 @@
                     <div class="main-kpi-grid">
                         <div class="card card-static g-ejer" id="card2026">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-bottom:2px;">
-                                <div class="kpi-lbl" style="margin-bottom:0; width:auto;">EJERCICIO COMERCIAL 2026</div>
+                                <div class="kpi-lbl" style="margin-bottom:0; width:auto;">EJERCICIO COMERCIAL 2027</div>
                                 <div id="kCuit26" style="font-size:0.65rem; font-weight:800; color:var(--primary); background:#dcfce7; padding:2px 5px; border-radius:4px; line-height:1; border:1px solid #bbf7d0; flex-shrink:0;">0 Ctas</div>
                             </div>
                             <div class="kpi-main-area" style="flex-direction:column; align-items:flex-start; justify-content:center; flex:1;">
@@ -1257,7 +1257,7 @@
                         </div>
 
                         <div class="card g-avan">
-                            <div class="kpi-lbl">AVANCE PRESUPUESTO 2026</div>
+                            <div class="kpi-lbl">AVANCE PRESUPUESTO 2027</div>
                             <div class="kpi-main-area">
                                 <div class="kpi-val" id="kTargetTotal">0 Tn</div>
                                 <i id="kTrendIcon" class="ri-pie-chart-2-fill" style="font-size:1.4rem;color:#e2e8f0;"></i>
@@ -1413,7 +1413,7 @@
                                     <col style="width:16%">
                                     <col style="width:16%">
                                 </colgroup>
-                                <thead><tr><th style="text-align:left;">Mes</th><th style="text-align:center;">Share SIO</th><th style="text-align:right;">2026</th><th style="text-align:right;">% Est</th><th style="text-align:right;">Plan</th><th style="text-align:right;">Desvío</th><th style="text-align:right;">Var%</th></tr></thead>
+                                <thead><tr><th style="text-align:left;">Mes</th><th style="text-align:center;">Share SIO</th><th style="text-align:right;">2027</th><th style="text-align:right;">% Est</th><th style="text-align:right;">Plan</th><th style="text-align:right;">Desvío</th><th style="text-align:right;">Var%</th></tr></thead>
                                 <tbody id="execTableBody"></tbody>
                             </table>
                         </div>
@@ -1434,7 +1434,7 @@
                                     <div class="chart-title" style="margin-bottom: 0;"><i class="ri-bar-chart-grouped-line" style="vertical-align:middle; margin-right:2px;"></i> EVOLUCIÓN POR PRODUCTO</div>
                                     <div class="chart-subtitle" style="display:flex; align-items:center; gap:10px; margin-top:0;">
                                         <div style="display:flex; align-items:center; font-size:0.58rem; color:#64748b; font-weight:700;"><span style="display:inline-block; width:8px; height:8px; background:#cbd5e1; border-radius:2px; margin-right:4px;"></span>2026 (YTD)</div>
-                                        <div style="display:flex; align-items:center; font-size:0.58rem; color:#64748b; font-weight:700;"><span style="display:inline-block; width:8px; height:8px; background:var(--primary); border-radius:2px; margin-right:4px;"></span>2026 (Act)</div>
+                                        <div style="display:flex; align-items:center; font-size:0.58rem; color:#64748b; font-weight:700;"><span style="display:inline-block; width:8px; height:8px; background:var(--primary); border-radius:2px; margin-right:4px;"></span>2027 (Act)</div>
                                     </div>
                                 </div>
                                 <div class="chart-tabs">
@@ -1476,7 +1476,7 @@
             WORKING_DAYS: {1:21,2:18,3:22,4:21,5:20,6:21,7:23,8:20,9:22,10:22,11:20,12:21},
             MONTH_NAMES: {11:'NOV',12:'DIC',1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT'}
         };
-        const SHARE_SIO = {'2020':3.24,'2021':2.86,'2022':2.44,'2023':2.63,'2024':2.81,'2025':3.50};
+        const SHARE_SIO = {'2020':3.24,'2021':2.86,'2022':2.44,'2023':2.63,'2024':2.81,'2025':3.50,'2026':3.04};
         // Nota: el share del 2026 se calcula dinámicamente desde la grilla SIO (helpers getShare2026Mensual / getShare2026Anual)
 
         // Volúmenes SIO Granos 2021-2025 por mes y producto (en Tn) - HARDCODE (años cerrados)
@@ -2379,8 +2379,8 @@
         function fillBudgetTable(){
             if(DB.length===0)return;
             const statsMap={};
-            budgetData.forEach(b=>{const r=normalize(b.r);if(!statsMap[r])statsMap[r]={target:0,real:0,type:b.type,rawName:b.r};statsMap[r].target+=b.t;});
-            DB.forEach(d=>{if(d.e.includes('26')){const r=d.r;if(statsMap[r]){statsMap[r].real+=d.vol;}}});
+            budgetData.forEach(b=>{const r=normalize(b.r);if(!statsMap[r])statsMap[r]={target:0,real:0,type:b.type,rawName:b.r};statsMap[r].target+=0;});  // obj 2027 sin definir -> 0
+            DB.forEach(d=>{if(d.e.includes('27')){const r=d.r;if(statsMap[r]){statsMap[r].real+=d.vol;}}});  // real del ejercicio en curso (2027)
 
             let totalRepTarget=0,totalRepReal=0,totalComTarget=0,totalComReal=0,totalOBBTarget=0,totalOBBReal=0;
             Object.values(statsMap).forEach(stat=>{
@@ -3830,7 +3830,7 @@ ${totalsRow}
             // --- Gráfico de productos (usa datos comprador porque VIEW_MODE='comprador') ---
             if (typeof renderProductChart === 'function') { try { renderProductChart(); } catch(e){ console.warn(e); } }
 
-            // --- Recuadro comparativo "AÑO 2025" del gráfico: recalcular con datos comprador ---
+            // --- Recuadro comparativo "AÑO 2026" del gráfico: recalcular con datos comprador ---
             var ytdChartEl = document.getElementById('kVol25YTDChart');
             if (ytdChartEl) {
                 var v25 = r.vol25YTD || 0;
@@ -3842,7 +3842,7 @@ ${totalsRow}
                 if (ytdPerc > 0) { ytdColor='#16a34a'; ytdBg='#dcfce7'; ytdIcon='<i class="ri-arrow-right-up-line"></i> '; }
                 else if (ytdPerc < 0) { ytdColor='#dc2626'; ytdBg='#fee2e2'; ytdIcon='<i class="ri-arrow-right-down-line"></i> '; }
                 ytdChartEl.innerHTML =
-                    '<div style="font-size:0.5rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">AÑO 2025</div>' +
+                    '<div style="font-size:0.5rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">AÑO 2026</div>' +
                     '<div style="color:'+ytdColor+'; background:'+ytdBg+'; padding:2px 6px; border-radius:4px; font-weight:800; font-size:0.65rem; display:inline-flex; align-items:center; margin-bottom:4px;">'+ytdIcon+(ytdPerc>0?'+':'')+ytdPerc.toFixed(1)+'%</div>' +
                     '<div style="font-size:0.75rem; font-weight:900; color:#64748b;">'+fmt(v25)+' Tn</div>';
             }
@@ -4162,7 +4162,7 @@ ${totalsRow}
             const isRepOrClientFiltered = (fr !== 'all' || fv !== 'all');
             updateHarvestStrip(context, isRepOrClientFiltered);
             
-            const d26=context.filter(d=>d.e.includes('26'));
+            const d26=context.filter(d=>d.e.includes('27'));  // ejercicio en curso (2027)
             // VOLUMEN: incluye TODAS las operaciones 2026, tambien todo Tittaferrante
             const v26=d26.reduce((a,b)=>a+b.vol,0);
             // CUENTAS: de Tittaferrante se cuenta SOLO Syngenta Agro (CUIT 30646328450); el resto de sus cuentas no cuentan
@@ -4201,7 +4201,7 @@ ${totalsRow}
             const ytdChartEl = document.getElementById('kVol25YTDChart');
             if (ytdChartEl) {
                 ytdChartEl.innerHTML = `
-                    <div style="font-size:0.5rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">AÑO 2025</div>
+                    <div style="font-size:0.5rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">AÑO 2026</div>
                     <div style="color:${ytdColor}; background:${ytdBg}; padding:2px 6px; border-radius:4px; font-weight:800; font-size:0.65rem; display:inline-flex; align-items:center; margin-bottom:4px; box-shadow:var(--shadow-sm);">${ytdIcon}${ytdPerc > 0 ? '+' : ''}${ytdPerc.toFixed(1)}%</div>
                     <div style="font-size:0.75rem; font-weight:900; color:#64748b;">${Math.round(v25YTD).toLocaleString('de-DE')} Tn</div>
                 `;
@@ -4355,7 +4355,8 @@ ${totalsRow}
         }
 
         function updateStrips(data, showShare = true) {
-            let lastVol = 0;
+            // Arranca con el volumen de 2021 para que la tarjeta 2022 muestre su variación vs 2021
+            let lastVol = data.filter(d => d.e === '2021').reduce((acc, curr) => acc + curr.vol, 0);
             ['2022', '2023', '2024', '2025', '2026'].forEach(y => {
                 const dYear = data.filter(d => d.e === y);
                 const vol = dYear.reduce((acc, curr) => acc + curr.vol, 0);
@@ -4619,7 +4620,7 @@ ${totalsRow}
             const currentM = dynamicCurrentMonth;
             const closedMonths = CONSTANTS.FISCAL_ORDER.slice(0, CONSTANTS.FISCAL_ORDER.indexOf(currentM));
             
-            const histData = contextHist.filter(d => d.e >= '2021' && d.e <= '2025');
+            const histData = contextHist.filter(d => d.e >= '2022' && d.e <= '2026');
             histData.forEach(d => { totalHistForPlan += d.vol; });
 
             let estPercMap = {};
@@ -4719,8 +4720,8 @@ ${totalsRow}
                 let trClass = isCurrent ? 'class="row-current"' : '';
                 let monthDisplay = isCurrent ? `${monthName} <span class="live-dot" style="margin-left:5px; height:6px; width:6px;" title="Mes en curso"></span>` : monthName;
                 
-                const shareMensualStr = getShare2026Mensual(m); // null si no hay datos
-                tbody.innerHTML += `<tr ${trClass}><td style="text-align:left;">${monthDisplay}</td><td style="text-align:center; font-weight:800;">${hideShareSio ? '-' : (shareMensualStr || '-')}</td><td style="text-align:right;font-weight:700;color:var(--text-main);">${fN(vol26)}</td><td style="text-align:right;"><span class="${semColor}">${percVal.toFixed(1)}%</span></td><td style="text-align:right; font-weight:900; color:#64748b;">${finalPlanDisplay}</td><td style="text-align:right; font-weight:700;">${devDisplayHtml}</td><td style="text-align:right; font-weight:700;">${varDisplayHtml}</td></tr>`;
+                // Share SIO en blanco: los datos de SIO son del 2026; vuelven cuando se cargue SIO 2027.
+                tbody.innerHTML += `<tr ${trClass}><td style="text-align:left;">${monthDisplay}</td><td style="text-align:center; font-weight:800;">-</td><td style="text-align:right;font-weight:700;color:var(--text-main);">${fN(vol26)}</td><td style="text-align:right;"><span class="${semColor}">${percVal.toFixed(1)}%</span></td><td style="text-align:right; font-weight:900; color:#64748b;">${finalPlanDisplay}</td><td style="text-align:right; font-weight:700;">${devDisplayHtml}</td><td style="text-align:right; font-weight:700;">${varDisplayHtml}</td></tr>`;
             });
             
             let tVarPercText = '-';
@@ -4739,7 +4740,7 @@ ${totalsRow}
             const avgShare = getShare2026Anual();
             const avgShareStr = avgShare.toFixed(2).replace('.', ',');
 
-            tbody.innerHTML += `<tr><td style="font-weight:800; color:var(--primary); text-align:left;">TOTAL</td><td style="text-align:center; font-weight:800; color:var(--primary);">${hideShareSio || avgShare<=0 ? '-' : avgShareStr + '%'}</td><td style="font-weight:800; color:var(--primary); text-align:right;">${Math.round(totalVol26).toLocaleString('de-DE')}</td><td style="font-weight:800; color:var(--primary); text-align:right;">100%</td><td style="font-weight:900; color:#64748b; text-align:right;">${finalTPlanDisplay}</td><td style="font-weight:900; text-align:right; color:${totalDevColor};">${finalTDevDisplay}</td><td style="font-weight:900; text-align:right; color:${totalDevColor};">${tVarPercText}</td></tr>`;
+            tbody.innerHTML += `<tr><td style="font-weight:800; color:var(--primary); text-align:left;">TOTAL</td><td style="text-align:center; font-weight:800; color:var(--primary);">-</td><td style="font-weight:800; color:var(--primary); text-align:right;">${Math.round(totalVol26).toLocaleString('de-DE')}</td><td style="font-weight:800; color:var(--primary); text-align:right;">100%</td><td style="font-weight:900; color:#64748b; text-align:right;">${finalTPlanDisplay}</td><td style="font-weight:900; text-align:right; color:${totalDevColor};">${finalTDevDisplay}</td><td style="font-weight:900; text-align:right; color:${totalDevColor};">${tVarPercText}</td></tr>`;
         }
 
         function generateHistoryTable() {
