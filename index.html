@@ -1377,7 +1377,7 @@
                                         <th id="th-2027" onclick="sortClientTable('2027')" style="color:var(--primary); border-bottom:2px solid var(--primary);">2027 <span style="margin-left:2px;"><i class="ri-arrow-down-s-fill"></i></span></th>
                                         <th id="th-obj27" onclick="sortClientTable('obj27')" title="Objetivo 2027 (del presupuesto que carga cada repre/comercial)">Obj. 2027 <span></span></th>
                                         <th id="th-cumpl27" onclick="sortClientTable('cumpl27')" title="% del objetivo 2027 cumplido (real 2027 / objetivo)">% Cumpl. <span></span></th>
-                                        <th id="th-share" onclick="sortClientTable('share')" title="Incidencia sobre el total 2026 de su Representante Comercial">Share Rep. <span></span></th>
+                                        <th id="th-share" onclick="sortClientTable('share')" title="Incidencia sobre el total 2027 de su Representante Comercial">Share Rep. <span></span></th>
                                     </tr>
                                 </thead>
                                 <tbody id="clientTableBody">
@@ -3035,7 +3035,7 @@
                     + cellNum(c['2027'] || 0, 'sNum')
                     + cellNum(c.obj27 || 0, 'sNum')
                     + cellDec((c.obj27 > 0) ? (c.cumpl27 || 0) : null, 'sDec')
-                    + cellDec((c['2026'] > 0) ? (c.share || 0) : null, 'sDec')
+                    + cellDec((c['2027'] > 0) ? (c.share || 0) : null, 'sDec')
                     + '</Row>';
             });
 
@@ -3189,9 +3189,9 @@ ${totalsRow}
             let cuitLatestDate = {};
             let cuitToName = {};
 
-            let repTotals2026 = {};
+            let repTotals2027 = {};
             DB.forEach(d => {
-                if(d.e === '2026') repTotals2026[d.r] = (repTotals2026[d.r] || 0) + d.vol;
+                if(d.e === '2027') repTotals2027[d.r] = (repTotals2027[d.r] || 0) + d.vol;
             });
 
             lastClientContext.forEach(d => {
@@ -3243,8 +3243,8 @@ ${totalsRow}
                 data.esProsp = !!(mEnt && mEnt.esProsp);
                 data.isMaestroFocus = !!(CARTERA_FOCUS_REPRE && mEnt && mEnt.comercialN === CARTERA_FOCUS_REPRE);
 
-                let repTotal26 = repTotals2026[data.rep] || 0;
-                data.share = (repTotal26 > 0 && data['2026'] > 0) ? (data['2026'] / repTotal26) * 100 : 0;
+                let repTotal27 = repTotals2027[data.rep] || 0;
+                data.share = (repTotal27 > 0 && data['2027'] > 0) ? (data['2027'] / repTotal27) * 100 : 0;
 
                 // Objetivo 2027 (del presupuesto que carga el repre) y % de cumplimiento (real 2027 / objetivo)
                 let obj27 = (typeof PRESU2027_OBJ !== 'undefined') ? (PRESU2027_OBJ[data.id + '|' + normalize(data.rep || '')] || 0) : 0;
@@ -3385,7 +3385,7 @@ ${totalsRow}
                 shareCell.style.color = 'var(--primary)';
                 shareCell.style.fontWeight = '800';
                 shareCell.style.backgroundColor = '#f0fdf4'; 
-                shareCell.innerHTML = c['2026'] > 0 ? `${c.share.toFixed(1)}%` : '-';
+                shareCell.innerHTML = c['2027'] > 0 ? `${c.share.toFixed(1)}%` : '-';
                 tr.appendChild(shareCell);
 
                 tbody.appendChild(tr);
