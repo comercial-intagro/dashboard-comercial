@@ -1371,10 +1371,12 @@
                                 <thead>
                                     <tr>
                                         <th id="th-name" onclick="sortClientTable('name')">Cliente / Vendedor <span></span></th>
-                                        <th id="th-2023" onclick="sortClientTable('2023')">2023 <span></span></th>
                                         <th id="th-2024" onclick="sortClientTable('2024')">2024 <span></span></th>
                                         <th id="th-2025" onclick="sortClientTable('2025')">2025 <span></span></th>
-                                        <th id="th-2026" onclick="sortClientTable('2026')" style="color:var(--primary); border-bottom:2px solid var(--primary);">2026 <span style="margin-left:2px;"><i class="ri-arrow-down-s-fill"></i></span></th>
+                                        <th id="th-2026" onclick="sortClientTable('2026')">2026 <span></span></th>
+                                        <th id="th-2027" onclick="sortClientTable('2027')" style="color:var(--primary); border-bottom:2px solid var(--primary);">2027 <span style="margin-left:2px;"><i class="ri-arrow-down-s-fill"></i></span></th>
+                                        <th id="th-obj27" onclick="sortClientTable('obj27')" title="Objetivo 2027 (del presupuesto que carga cada repre/comercial)">Obj. 2027 <span></span></th>
+                                        <th id="th-cumpl27" onclick="sortClientTable('cumpl27')" title="% del objetivo 2027 cumplido (real 2027 / objetivo)">% Cumpl. <span></span></th>
                                         <th id="th-share" onclick="sortClientTable('share')" title="Incidencia sobre el total 2026 de su Representante Comercial">Share Rep. <span></span></th>
                                     </tr>
                                 </thead>
@@ -1467,7 +1469,7 @@
 
         Chart.register(ChartDataLabels);
 
-        let currentClientSortCol = '2026';
+        let currentClientSortCol = '2027';
         let clientSortAsc = false;
         let lastClientContext = []; 
 
@@ -1667,6 +1669,7 @@
         let MAESTRO_BY_CUIT = {};        // cuit -> {cuit,nombre,comercial,comercialN,esProsp}
         let MAESTRO_BY_REPRE = {};       // comercial normalizado -> [entradas del maestro]
         let CARTERA_FOCUS_REPRE = null;  // comercial en foco en la grilla de cartera (null = toda la empresa)
+        let PRESU2027_OBJ = {};          // 'CUIT_<cuit>|<REPRE NORM>' -> objetivo 2027 (tn) del presupuesto
         let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
         let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría (Exportacion/Molino/Consumo/Otros)
         let DEST_ZONA = {}; // mapa descripcion destino normalizada -> zona
@@ -2091,6 +2094,18 @@
                             MAESTRO_BY_CUIT[cuit] = ent;
                             if (!MAESTRO_BY_REPRE[comN]) MAESTRO_BY_REPRE[comN] = [];
                             MAESTRO_BY_REPRE[comN].push(ent);
+                        });
+                    }
+                    // Presupuesto 2027 por cliente -> mapa 'CUIT_<cuit>|<REPRE NORM>' -> tn objetivo.
+                    // Alimenta las columnas Objetivo 2027 y % Cumpl de la grilla de cartera.
+                    PRESU2027_OBJ = {};
+                    if (payload.presu2027 && Array.isArray(payload.presu2027)) {
+                        payload.presu2027.forEach(function(r){
+                            var k = String(r.key || '');
+                            if (k.indexOf('__') === 0) return;        // claves reservadas (__CONFIRMADO__)
+                            var tn = parseFloat(r.tn);
+                            if (isNaN(tn)) return;
+                            PRESU2027_OBJ[k + '|' + normalize(r.repre || '')] = tn;
                         });
                     }
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
@@ -2957,13 +2972,13 @@
 
             // Totales por año
             const totals = {
-                '2023': 0, '2024': 0, '2025': 0, '2026': 0
+                '2024': 0, '2025': 0, '2026': 0, '2027': 0
             };
             rows.forEach(c => {
-                totals['2023'] += (c['2023'] || 0);
                 totals['2024'] += (c['2024'] || 0);
                 totals['2025'] += (c['2025'] || 0);
                 totals['2026'] += (c['2026'] || 0);
+                totals['2027'] += (c['2027'] || 0);
             });
 
             // Celda numérica (entera, con formato #.##0)
@@ -2988,10 +3003,12 @@
                 bodyRows += '<Row>'
                     + cellTxt(c.rep || 'SIN ASIGNAR', 'sRepBody')
                     + cellTxt(c.name || '', 'sText')
-                    + cellNum(c['2023'] || 0, 'sNum')
                     + cellNum(c['2024'] || 0, 'sNum')
                     + cellNum(c['2025'] || 0, 'sNum')
                     + cellNum(c['2026'] || 0, 'sNum')
+                    + cellNum(c['2027'] || 0, 'sNum')
+                    + cellNum(c.obj27 || 0, 'sNum')
+                    + cellDec((c.obj27 > 0) ? (c.cumpl27 || 0) : null, 'sDec')
                     + cellDec((c['2026'] > 0) ? (c.share || 0) : null, 'sDec')
                     + '</Row>';
             });
@@ -3000,15 +3017,17 @@
             const totalsRow = '<Row>'
                 + cellTxt('TOTAL', 'sTotalLabel')
                 + cellTxt('', 'sTotalLabel')
-                + cellNum(totals['2023'], 'sTotalNum')
                 + cellNum(totals['2024'], 'sTotalNum')
                 + cellNum(totals['2025'], 'sTotalNum')
                 + cellNum(totals['2026'], 'sTotalNum')
+                + cellNum(totals['2027'], 'sTotalNum')
+                + '<Cell ss:StyleID="sTotalNum"/>'
+                + '<Cell ss:StyleID="sTotalNum"/>'
                 + '<Cell ss:StyleID="sTotalNum"/>'
                 + '</Row>';
 
             // Encabezado
-            const headers = ['Repre/Comercial', 'Cliente/Vendedor', '2023', '2024', '2025', '2026', 'Share Repre/Comercial (%)'];
+            const headers = ['Repre/Comercial', 'Cliente/Vendedor', '2024', '2025', '2026', '2027', 'Obj. 2027', '% Cumpl. 2027', 'Share Repre/Comercial (%)'];
             let headerRow = '<Row>';
             headers.forEach(h => { headerRow += cellTxt(h, 'sHeader'); });
             headerRow += '</Row>';
@@ -3136,8 +3155,8 @@ ${totalsRow}
         function generateClientTable(contextData, isSortAction = false) {
             if(!isSortAction) lastClientContext = contextData; 
             
-            const targetYears = ['2023', '2024', '2025', '2026'];
-            const allRequiredYears = ['2022', '2023', '2024', '2025', '2026'];
+            const targetYears = ['2024', '2025', '2026', '2027'];
+            const allRequiredYears = ['2023', '2024', '2025', '2026', '2027'];
             
             let clientMap = {};
             let clientRepMap = {};
@@ -3153,7 +3172,7 @@ ${totalsRow}
                 if (allRequiredYears.includes(d.e) && (d.v || d.cuitLimpio)) {
                     let groupKey = d.cuitLimpio ? 'CUIT_' + d.cuitLimpio : 'NAME_' + d.v;
 
-                    if (!clientMap[groupKey]) { clientMap[groupKey] = { '2022': 0, '2023': 0, '2024': 0, '2025': 0, '2026': 0 }; }
+                    if (!clientMap[groupKey]) { clientMap[groupKey] = { '2023': 0, '2024': 0, '2025': 0, '2026': 0, '2027': 0 }; }
                     clientMap[groupKey][d.e] += d.vol;
                     if(d.r) clientRepMap[groupKey] = d.r;
 
@@ -3179,7 +3198,7 @@ ${totalsRow}
                 MAESTRO_BY_REPRE[CARTERA_FOCUS_REPRE].forEach(function(ent){
                     var gk = 'CUIT_' + ent.cuit;
                     if (!clientMap[gk]) {
-                        clientMap[gk] = { '2022': 0, '2023': 0, '2024': 0, '2025': 0, '2026': 0 };
+                        clientMap[gk] = { '2023': 0, '2024': 0, '2025': 0, '2026': 0, '2027': 0 };
                         cuitToName[gk] = ent.nombre;
                         clientRepMap[gk] = CARTERA_FOCUS_REPRE;
                     }
@@ -3201,8 +3220,13 @@ ${totalsRow}
                 let repTotal26 = repTotals2026[data.rep] || 0;
                 data.share = (repTotal26 > 0 && data['2026'] > 0) ? (data['2026'] / repTotal26) * 100 : 0;
 
+                // Objetivo 2027 (del presupuesto que carga el repre) y % de cumplimiento (real 2027 / objetivo)
+                let obj27 = (typeof PRESU2027_OBJ !== 'undefined') ? (PRESU2027_OBJ[data.id + '|' + normalize(data.rep || '')] || 0) : 0;
+                data.obj27 = obj27;
+                data.cumpl27 = obj27 > 0 ? (data['2027'] / obj27) * 100 : 0;
+
                 let maxVol = 0, bestY = null;
-                ['2023', '2024', '2025'].forEach(y => {
+                ['2024', '2025', '2026'].forEach(y => {
                     if (data[y] > maxVol) { maxVol = data[y]; bestY = y; }
                 });
                 data.bestYear = bestY;
@@ -3226,7 +3250,7 @@ ${totalsRow}
                 return clientSortAsc ? valA - valB : valB - valA;
             });
 
-            ['name', '2023', '2024', '2025', '2026', 'share'].forEach(col => {
+            ['name', '2024', '2025', '2026', '2027', 'obj27', 'cumpl27', 'share'].forEach(col => {
                 let th = document.getElementById('th-' + col);
                 if (th) {
                     let span = th.querySelector('span');
@@ -3246,7 +3270,7 @@ ${totalsRow}
             const activeVendorId = document.getElementById('fVend').value;
 
             // Guardar lista de clientes efectivamente renderizados (con sumCheck>0) para exportar
-            window.lastClientsRendered = clients.filter(c => (c['2023']+c['2024']+c['2025']+c['2026']) > 0);
+            window.lastClientsRendered = clients.filter(c => (c['2024']+c['2025']+c['2026']+c['2027']) > 0);
 
             // SCROLL UX: Reset de scroll suave si no hay cliente activo o si se acaba de "limpiar"
             const tableContainer = document.querySelector('.client-table-container');
@@ -3255,7 +3279,7 @@ ${totalsRow}
             }
 
             clients.forEach(c => {
-                let sumCheck = c['2023'] + c['2024'] + c['2025'] + c['2026'];
+                let sumCheck = c['2024'] + c['2025'] + c['2026'] + c['2027'];
                 // Se ocultan los clientes sin volumen, SALVO que sean cartera del maestro del
                 // comercial en foco (esos se muestran aunque no hayan operado, para presupuestarlos).
                 if(sumCheck === 0 && !c.isMaestroFocus) return;
@@ -3296,7 +3320,7 @@ ${totalsRow}
                     td.className = 'client-vol-cell';
                     let val = c[y];
                     let contentHTML = formatN(val);
-                    if (y === c.bestYear && val > 0 && y !== '2026') { contentHTML = `<span class="client-best-pill">${contentHTML}</span>`; }
+                    if (y === c.bestYear && val > 0 && y !== '2027') { contentHTML = `<span class="client-best-pill">${contentHTML}</span>`; }
                     
                     let prevY = (parseInt(y) - 1).toString();
                     let prevVal = c[prevY];
@@ -3312,6 +3336,24 @@ ${totalsRow}
                     tr.appendChild(td);
                 });
 
+                // Objetivo 2027 (del presupuesto del repre/comercial; vacío hasta presupuestar)
+                let objCell = document.createElement('td');
+                objCell.className = 'client-vol-cell';
+                objCell.innerHTML = c.obj27 > 0 ? formatN(c.obj27) : '-';
+                tr.appendChild(objCell);
+
+                // % Cumplimiento 2027 = real 2027 / objetivo
+                let cumplCell = document.createElement('td');
+                cumplCell.className = 'client-vol-cell';
+                if (c.obj27 > 0) {
+                    let p = c.cumpl27;
+                    let col = p >= 100 ? '#16a34a' : (p >= 60 ? '#d97706' : '#dc2626');
+                    cumplCell.innerHTML = `<span style="color:${col}; font-weight:800;">${p.toFixed(0)}%</span>`;
+                } else {
+                    cumplCell.innerHTML = '<span style="color:#cbd5e1;">-</span>';
+                }
+                tr.appendChild(cumplCell);
+
                 let shareCell = document.createElement('td');
                 shareCell.className = 'client-vol-cell';
                 shareCell.style.color = 'var(--primary)';
@@ -3323,7 +3365,7 @@ ${totalsRow}
                 tbody.appendChild(tr);
             });
             
-            if(clients.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#94a3b8; font-size:0.7rem; font-weight:600;">No hay clientes en el filtro seleccionado</td></tr>`; }
+            if(clients.length === 0) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:15px; color:#94a3b8; font-size:0.7rem; font-weight:600;">No hay clientes en el filtro seleccionado</td></tr>`; }
             filterClientTable();
         }
 
@@ -4211,11 +4253,9 @@ ${totalsRow}
             const avgShare = getShare2026Anual();
             const avgShareStr = avgShare.toFixed(2).replace('.', ',');
 
+            // Tarjeta del ejercicio en curso (2027): sin Share SIO hasta cargar SIO 2027 (los datos actuales son 2026).
             const shareBadge=document.getElementById('shareSioBadge');
-            if(fr==='all'&&fv==='all'&&fp==='all'){
-                shareBadge.style.display='block';
-                shareBadge.innerText = avgShare > 0 ? `Share Sio ${avgShareStr}%` : 'Share Sio -';
-            } else { shareBadge.style.display='none'; }
+            if(shareBadge) shareBadge.style.display='none';
 
             // Objetivo del ejercicio en curso (2027): aún sin definir -> 0 (avance y objetivo
             // diario en cero hasta cargar el número). Por repre todavía no hay objetivo 2027.
