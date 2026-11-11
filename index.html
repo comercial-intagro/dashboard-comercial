@@ -306,9 +306,14 @@
         /* Vista compradora: contenedor de las 4 tarjetas de categoría ocupa toda la fila 2 */
         .categ-cards-container {
             grid-column: 1 / 4; grid-row: 2;
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 0.8vh, 12px);
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: clamp(4px, 0.5vw, 8px);
             align-self: start;
         }
+        /* En 7 columnas las tarjetas son más angostas: compactar textos */
+        .categ-cards-container .categ-card .sm-title { font-size: 0.6rem; letter-spacing: 0; white-space: nowrap; }
+        .categ-cards-container .categ-card .sm-val { font-size: 0.82rem; }
+        .categ-cards-container .categ-card .sm-perc { font-size: 0.58rem; }
+        .categ-cards-container .categ-card { padding: 8px 8px; }
         .categ-card .sm-body { margin-top: 4px; }
         .categ-card { transition: all 0.18s ease; }
         .categ-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
@@ -1321,24 +1326,7 @@
                         </div>
 
                         <!-- Vista compradora: 4 tarjetas de categoría (ocultas en vendedor) -->
-                        <div class="categ-cards-container" id="categCardsContainer" style="display:none;">
-                            <div class="sm-card categ-card" id="categExportacion" onclick="toggleCategoria('Exportacion')" style="cursor:pointer;">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-ship-line sm-icon" style="color:#2563eb;"></i> Exportación</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categExpVal">0 Tn</div><div class="sm-perc" id="categExpPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
-                            </div>
-                            <div class="sm-card categ-card" id="categMolino" onclick="toggleCategoria('Molino')" style="cursor:pointer;">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-building-2-line sm-icon" style="color:#7c3aed;"></i> Molino</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categMolVal">0 Tn</div><div class="sm-perc" id="categMolPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
-                            </div>
-                            <div class="sm-card categ-card" id="categConsumo" onclick="toggleCategoria('Consumo')" style="cursor:pointer;">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-restaurant-line sm-icon" style="color:#d97706;"></i> Consumo</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categConsVal">0 Tn</div><div class="sm-perc" id="categConsPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
-                            </div>
-                            <div class="sm-card categ-card" id="categOtros" onclick="toggleCategoria('Otros')" style="cursor:pointer;">
-                                <div class="sm-header"><div class="sm-title"><i class="ri-more-2-line sm-icon" style="color:#64748b;"></i> Otros</div></div>
-                                <div class="sm-body"><div class="sm-val" id="categOtrVal">0 Tn</div><div class="sm-perc" id="categOtrPerc"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>
-                            </div>
-                        </div>
+                        <div class="categ-cards-container" id="categCardsContainer" style="display:none;"><!-- 7 tarjetas generadas por buildCategCards() desde CATEG_LIST --></div>
 
                         <div class="harvest-strip g-harvest-strip" id="harvestStripMain">
                             <div class="y-card" id="hc2324"><div class="y-lbl">23/24</div><div class="y-val">-</div><div class="y-sub"><span class="y-cuentas">- Ctas</span></div><div class="y-badge" id="hb2324"></div></div>
@@ -1680,7 +1668,33 @@
         let CARTERA_FOCUS_REPRE = null;  // comercial en foco en la grilla de cartera (null = toda la empresa)
         let PRESU2027_OBJ = {};          // 'CUIT_<cuit>|<REPRE NORM>' -> objetivo 2027 (tn) del presupuesto
         let GLOBAL_MAX_DATE = null; // fecha de actualización del DB general (del backend)
-        let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría (Exportacion/Molino/Consumo/Otros)
+        let CATEG_COMPRADORES = {}; // mapa CUIT comprador -> categoría canónica (ver CATEG_LIST)
+        // Configuración de las 7 categorías de comprador (orden = orden de las tarjetas).
+        // 'key' debe coincidir con lo que devuelve resolveCateg() y con las claves de porCategoria.
+        const CATEG_LIST = [
+            { key:'Exportacion',       label:'Exportación', icon:'ri-ship-line',       color:'#2563eb', id:'categExportacion', valId:'categExpVal',    percId:'categExpPerc' },
+            { key:'Acopio',            label:'Acopio',      icon:'ri-archive-2-line',  color:'#0891b2', id:'categAcopio',      valId:'categAcoVal',    percId:'categAcoPerc' },
+            { key:'A3',                label:'A3',          icon:'ri-focus-3-line',    color:'#db2777', id:'categA3',          valId:'categA3Val',     percId:'categA3Perc' },
+            { key:'Acopio/Exportador', label:'Acopio/Exp.', icon:'ri-ship-2-line',     color:'#0d9488', id:'categAcoExp',      valId:'categAcoExpVal', percId:'categAcoExpPerc' },
+            { key:'Consumo',           label:'Consumo',     icon:'ri-restaurant-line', color:'#d97706', id:'categConsumo',     valId:'categConsVal',   percId:'categConsPerc' },
+            { key:'Molino',            label:'Molino',      icon:'ri-building-2-line', color:'#7c3aed', id:'categMolino',      valId:'categMolVal',    percId:'categMolPerc' },
+            { key:'Otros',             label:'Otros',       icon:'ri-more-2-line',     color:'#64748b', id:'categOtros',       valId:'categOtrVal',    percId:'categOtrPerc' }
+        ];
+        // Resuelve el valor de la columna Mercado del Sheet a una de las 7 categorías canónicas.
+        // Tolerante a mayúsculas, acentos, espacios y separadores.
+        function resolveCateg(mercadoRaw) {
+            var m = String(mercadoRaw||'').toUpperCase()
+                .normalize('NFD').replace(/[̀-ͯ]/g,'')
+                .replace(/\s*\/\s*/g,'/').replace(/\s+/g,' ').trim();
+            if (!m) return 'Otros';
+            if (m.indexOf('ACOPIO') !== -1 && m.indexOf('EXPORT') !== -1) return 'Acopio/Exportador';
+            if (/(^|[^A-Z0-9])A3([^A-Z0-9]|$)/.test(m)) return 'A3';
+            if (m.indexOf('EXPORTACION') !== -1 || m.indexOf('EXPORTADOR') !== -1) return 'Exportacion';
+            if (m.indexOf('ACOPIO') !== -1) return 'Acopio';
+            if (m.indexOf('MOLINO') !== -1) return 'Molino';
+            if (m.indexOf('CONSUMO') !== -1) return 'Consumo';
+            return 'Otros';
+        }
         let DEST_ZONA = {}; // mapa descripcion destino normalizada -> zona
         function normDestino(s){
             if(!s) return '';
@@ -1990,14 +2004,8 @@
                     if (payload.categorizacion && Array.isArray(payload.categorizacion)) {
                         payload.categorizacion.forEach(function(par){
                             var cuit = String(par[0]||'').replace(/\D/g,'');
-                            var mercadoRaw = String(par[1]||'').toUpperCase().trim();
                             if (!cuit) return;
-                            var cat;
-                            if (mercadoRaw.indexOf('EXPORTACION') !== -1) cat = 'Exportacion';
-                            else if (mercadoRaw.indexOf('MOLINO') !== -1) cat = 'Molino';
-                            else if (mercadoRaw.indexOf('CONSUMO') !== -1) cat = 'Consumo';
-                            else cat = 'Otros'; // Acopio/Cooperativa, Canje, Otros, y cualquier otro
-                            CATEG_COMPRADORES[cuit] = cat;
+                            CATEG_COMPRADORES[cuit] = resolveCateg(par[1]);
                         });
                     }
                     // Mapa de destinos -> zona (para el filtro de Destino, todos los usuarios).
@@ -2854,7 +2862,7 @@
                 if (destTxtC) destTxtC.innerText = 'Todas las zonas';
                 // Resetear categoría activa y su resaltado
                 CATEG_ACTIVA = 'all';
-                ['categExportacion','categMolino','categConsumo','categOtros'].forEach(function(id){
+                CATEG_LIST.map(function(c){return c.id;}).forEach(function(id){
                     var el = document.getElementById(id); if (el) el.classList.remove('categ-active');
                 });
                 // Cerrar dropdowns y limpiar búsquedas
@@ -3287,6 +3295,14 @@ ${totalsRow}
                 return clientSortAsc ? valA - valB : valB - valA;
             });
 
+            // Restaurar header de vendedor (al volver de la vista comprador que lo modifica)
+            var thNameV = document.getElementById('th-name');
+            if (thNameV && thNameV.innerText.indexOf('Comprador') !== -1) thNameV.innerHTML = 'Cliente / Vendedor <span></span>';
+            var thShareV = document.getElementById('th-share');
+            if (thShareV && thShareV.innerText.trim().indexOf('Rep') === -1) thShareV.innerHTML = 'Share Rep. <span></span>';
+            var thObjV = document.getElementById('th-obj27'); if (thObjV) thObjV.style.display = '';
+            var thCumplV = document.getElementById('th-cumpl27'); if (thCumplV) thCumplV.style.display = '';
+
             ['name', '2024', '2025', '2026', '2027', 'obj27', 'cumpl27', 'share'].forEach(col => {
                 let th = document.getElementById('th-' + col);
                 if (th) {
@@ -3600,7 +3616,7 @@ ${totalsRow}
                 if (compTxt) compTxt.innerText = 'Todos';
                 // Resetear categoría activa y su resaltado
                 CATEG_ACTIVA = 'all';
-                ['categExportacion','categMolino','categConsumo','categOtros'].forEach(function(id){
+                CATEG_LIST.map(function(c){return c.id;}).forEach(function(id){
                     var el = document.getElementById(id); if (el) el.classList.remove('categ-active');
                 });
                 renderVistaCompradora();
@@ -3700,7 +3716,7 @@ ${totalsRow}
             // Al elegir un comprador puntual, limpiar el filtro de categoría (evita conflicto)
             if (cuit !== 'all') {
                 CATEG_ACTIVA = 'all';
-                ['categExportacion','categMolino','categConsumo','categOtros'].forEach(function(id){
+                CATEG_LIST.map(function(c){return c.id;}).forEach(function(id){
                     var el = document.getElementById(id); if (el) el.classList.remove('categ-active');
                 });
             }
@@ -3709,6 +3725,21 @@ ${totalsRow}
 
         // Click en tarjeta de categoría: filtra todo el dashboard por esa categoría.
         // Volver a clickear la activa la desactiva.
+        // Construye las 7 tarjetas de categoría desde CATEG_LIST (una sola vez).
+        function buildCategCards(){
+            var cont = document.getElementById('categCardsContainer');
+            if (!cont || cont.getAttribute('data-built') === '1') return;
+            var html = '';
+            CATEG_LIST.forEach(function(c){
+                html += '<div class="sm-card categ-card" id="'+c.id+'" onclick="toggleCategoria(\''+c.key+'\')" style="cursor:pointer;">'
+                    + '<div class="sm-header"><div class="sm-title"><i class="'+c.icon+' sm-icon" style="color:'+c.color+';"></i> '+c.label+'</div></div>'
+                    + '<div class="sm-body"><div class="sm-val" id="'+c.valId+'">0 Tn</div><div class="sm-perc" id="'+c.percId+'"><i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>0%</div></div>'
+                    + '</div>';
+            });
+            cont.innerHTML = html;
+            cont.setAttribute('data-built','1');
+        }
+
         function toggleCategoria(cat){
             if (VIEW_MODE !== 'comprador') return;
             if (CATEG_ACTIVA === cat) {
@@ -3722,10 +3753,9 @@ ${totalsRow}
                 if (compTxt) compTxt.innerText = 'Todos';
             }
             // Resaltar la tarjeta activa
-            var mapa = { 'Exportacion':'categExportacion', 'Molino':'categMolino', 'Consumo':'categConsumo', 'Otros':'categOtros' };
-            Object.keys(mapa).forEach(function(k){
-                var el = document.getElementById(mapa[k]);
-                if (el) el.classList.toggle('categ-active', CATEG_ACTIVA === k);
+            CATEG_LIST.forEach(function(c){
+                var el = document.getElementById(c.id);
+                if (el) el.classList.toggle('categ-active', CATEG_ACTIVA === c.key);
             });
             renderVistaCompradora();
         }
@@ -3771,28 +3801,25 @@ ${totalsRow}
                     '</div>';
             }
 
-            // --- 4 tarjetas de categoría: ocultar rep/com/obb, mostrar categorías ---
+            // --- 7 tarjetas de categoría: ocultar rep/com/obb, mostrar categorías ---
             ['g-rep','g-com','g-obb'].forEach(function(cls){
                 var el = document.querySelector('.' + cls);
                 if (el) el.style.display = 'none';
             });
+            buildCategCards();
             var categCont = document.getElementById('categCardsContainer');
             if (categCont) categCont.style.display = 'grid';
-            function setCateg(idVal, idPerc, valor, totalRef){
-                var tot = (totalRef !== undefined) ? totalRef : r.vol26Total;
-                var v = document.getElementById(idVal); if (v) v.innerText = fmt(valor) + ' Tn';
-                var p = document.getElementById(idPerc); if (p) p.innerHTML = '<i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>' + pct(valor, tot);
-            }
-            // Las 4 tarjetas de categoría SIEMPRE muestran el total de cada categoría
-            // (sin aplicar el filtro de categoría activa, para poder clickear entre ellas).
+            // Las tarjetas SIEMPRE muestran el total de cada categoría (sin el filtro de categoría
+            // activa, para poder clickear entre ellas).
             var rCat = calcularVistaCompradora(
                 document.getElementById('fProd') ? document.getElementById('fProd').value : 'all',
                 'all', 'all'
             );
-            setCateg('categExpVal','categExpPerc', rCat.porCategoria['Exportacion']||0, rCat.vol26Total);
-            setCateg('categMolVal','categMolPerc', rCat.porCategoria['Molino']||0, rCat.vol26Total);
-            setCateg('categConsVal','categConsPerc', rCat.porCategoria['Consumo']||0, rCat.vol26Total);
-            setCateg('categOtrVal','categOtrPerc', rCat.porCategoria['Otros']||0, rCat.vol26Total);
+            CATEG_LIST.forEach(function(c){
+                var valor = rCat.porCategoria[c.key] || 0;
+                var v = document.getElementById(c.valId); if (v) v.innerText = fmt(valor) + ' Tn';
+                var p = document.getElementById(c.percId); if (p) p.innerHTML = '<i class="ri-pie-chart-2-line" style="margin-right:3px;opacity:0.7;"></i>' + pct(valor, rCat.vol26Total);
+            });
 
             // --- Tarjetas de ejercicio histórico (2021-2025) con cuentas compradoras ---
             var lastVol = 0;
@@ -3851,6 +3878,9 @@ ${totalsRow}
             if (thName) thName.innerHTML = 'Cliente Comprador <span></span>';
             var thShare = document.getElementById('th-share');
             if (thShare) thShare.innerHTML = 'Share <span></span>';
+            // Los compradores no tienen objetivo: ocultar Obj 2027 y % Cumpl en modo comprador
+            var thObj = document.getElementById('th-obj27'); if (thObj) thObj.style.display = 'none';
+            var thCumpl = document.getElementById('th-cumpl27'); if (thCumpl) thCumpl.style.display = 'none';
             var clientHeader = document.querySelector('.client-header > div:first-child');
             if (clientHeader) clientHeader.innerHTML = '<i class="ri-contacts-book-2-line" style="font-size:1rem;"></i> EVOLUCIÓN DE CARTERA (COMPRADORES)';
 
@@ -3858,15 +3888,15 @@ ${totalsRow}
             if (tbody) {
                 tbody.innerHTML = '';
                 var lista = r.listaCompradores.slice();
-                // Ordenar por volumen 2026 desc
+                // Ordenar por volumen 2026 desc (último ejercicio cerrado)
                 lista.sort(function(a,b){ return b['2026'] - a['2026']; });
                 var formatN = function(n){ return n > 0 ? Math.round(n).toLocaleString('de-DE') : '-'; };
                 lista.forEach(function(c){
-                    var sumCheck = c['2023']+c['2024']+c['2025']+c['2026'];
+                    var sumCheck = c['2024']+c['2025']+c['2026']+c['2027'];
                     if (sumCheck === 0) return;
-                    // Mejor año (entre 2023-2025) para la pastilla amarilla, igual que vendedor
+                    // Mejor año (entre 2024-2026, cerrados) para la pastilla amarilla
                     var bestYear = null, bestVal = 0;
-                    ['2023','2024','2025'].forEach(function(y){ if (c[y] > bestVal) { bestVal = c[y]; bestYear = y; } });
+                    ['2024','2025','2026'].forEach(function(y){ if (c[y] > bestVal) { bestVal = c[y]; bestYear = y; } });
                     var tr = document.createElement('tr');
                     // Nombre
                     var tdName = document.createElement('td');
@@ -3874,13 +3904,13 @@ ${totalsRow}
                     tdName.innerText = c.nombre || c.cuit;
                     tdName.title = c.nombre + ' (CUIT: ' + c.cuit + ')';
                     tr.appendChild(tdName);
-                    // Volúmenes por año con pastilla del mejor año y flechas de tendencia
-                    ['2023','2024','2025','2026'].forEach(function(y){
+                    // Volúmenes por año 2024-2027 (alineado con el header), con pastilla y tendencia
+                    ['2024','2025','2026','2027'].forEach(function(y){
                         var td = document.createElement('td');
                         td.className = 'client-vol-cell';
                         var val = c[y];
                         var html = formatN(val);
-                        if (y === bestYear && val > 0 && y !== '2026') { html = '<span class="client-best-pill">' + html + '</span>'; }
+                        if (y === bestYear && val > 0 && y !== '2027') { html = '<span class="client-best-pill">' + html + '</span>'; }
                         var prevY = (parseInt(y)-1).toString();
                         var prevVal = c[prevY];
                         if (prevVal !== undefined) {
@@ -3893,14 +3923,14 @@ ${totalsRow}
                         td.innerHTML = html;
                         tr.appendChild(td);
                     });
-                    // Share = % incidencia sobre total 2026 (mismo estilo que vendedor)
+                    // Share = % de incidencia sobre el total comprado del ejercicio en curso (2027)
                     var shareCell = document.createElement('td');
                     shareCell.className = 'client-vol-cell';
                     shareCell.style.color = 'var(--primary)';
                     shareCell.style.fontWeight = '800';
                     shareCell.style.backgroundColor = '#f0fdf4';
-                    var share = r.vol26Total > 0 ? (c['2026']/r.vol26Total*100) : 0;
-                    shareCell.innerHTML = c['2026'] > 0 ? share.toFixed(1) + '%' : '-';
+                    var share = r.vol26Total > 0 ? (c['2027']/r.vol26Total*100) : 0;
+                    shareCell.innerHTML = c['2027'] > 0 ? share.toFixed(1) + '%' : '-';
                     tr.appendChild(shareCell);
                     tbody.appendChild(tr);
                 });
@@ -4157,7 +4187,7 @@ ${totalsRow}
             const volDirectos = vol26Total - volArgVend;
 
             // --- 4 tarjetas de categoría (ejercicio 2026) ---
-            const porCategoria = { 'Exportacion':0, 'Molino':0, 'Consumo':0, 'Otros':0 };
+            const porCategoria = {}; CATEG_LIST.forEach(function(c){ porCategoria[c.key] = 0; });
             d26.forEach(d => {
                 const cuitC = String(d.cuitComp||'').replace(/\D/g,'');
                 porCategoria[catDe(cuitC)] += d.vol;
@@ -4196,7 +4226,7 @@ ${totalsRow}
                     var m = {};
                     universo.forEach(function(d){
                         var cuitC = String(d.cuitComp||'').replace(/\D/g,'');
-                        if (!m[cuitC]) m[cuitC] = { cuit:cuitC, nombre:d.comprador||'', '2023':0,'2024':0,'2025':0,'2026':0, ts:0 };
+                        if (!m[cuitC]) m[cuitC] = { cuit:cuitC, nombre:d.comprador||'', '2023':0,'2024':0,'2025':0,'2026':0,'2027':0, ts:0 };
                         if (m[cuitC][d.e] !== undefined) m[cuitC][d.e] += d.vol;
                         if (d.dObj && d.dObj.getTime() > m[cuitC].ts) { m[cuitC].ts = d.dObj.getTime(); m[cuitC].nombre = d.comprador||m[cuitC].nombre; }
                     });
