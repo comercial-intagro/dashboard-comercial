@@ -1047,10 +1047,7 @@
                         </div>
                         <select id="categMercadoFilter" onchange="filterCategModal()" class="modal-select-modern" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.82rem;font-weight:600;color:#475569;background:#fff;cursor:pointer;">
                             <option value="all">Todos los mercados</option>
-                            <option value="Exportacion">Exportación</option>
-                            <option value="Molino">Molino</option>
-                            <option value="Consumo">Consumo</option>
-                            <option value="Otros">Otros</option>
+                            <!-- opciones generadas desde CATEG_LIST en llenarCategModal() -->
                         </select>
                         <div class="close-btn" onclick="toggleModal('categModal',false)" style="margin-left:6px;"><i class="ri-close-line"></i></div>
                     </div>
@@ -1672,13 +1669,13 @@
         // Configuración de las 7 categorías de comprador (orden = orden de las tarjetas).
         // 'key' debe coincidir con lo que devuelve resolveCateg() y con las claves de porCategoria.
         const CATEG_LIST = [
-            { key:'Exportacion',       label:'Exportación', icon:'ri-ship-line',       color:'#2563eb', id:'categExportacion', valId:'categExpVal',    percId:'categExpPerc' },
-            { key:'Acopio',            label:'Acopio',      icon:'ri-archive-2-line',  color:'#0891b2', id:'categAcopio',      valId:'categAcoVal',    percId:'categAcoPerc' },
-            { key:'A3',                label:'A3',          icon:'ri-focus-3-line',    color:'#db2777', id:'categA3',          valId:'categA3Val',     percId:'categA3Perc' },
-            { key:'Acopio/Exportador', label:'Acopio/Exp.', icon:'ri-ship-2-line',     color:'#0d9488', id:'categAcoExp',      valId:'categAcoExpVal', percId:'categAcoExpPerc' },
-            { key:'Consumo',           label:'Consumo',     icon:'ri-restaurant-line', color:'#d97706', id:'categConsumo',     valId:'categConsVal',   percId:'categConsPerc' },
-            { key:'Molino',            label:'Molino',      icon:'ri-building-2-line', color:'#7c3aed', id:'categMolino',      valId:'categMolVal',    percId:'categMolPerc' },
-            { key:'Otros',             label:'Otros',       icon:'ri-more-2-line',     color:'#64748b', id:'categOtros',       valId:'categOtrVal',    percId:'categOtrPerc' }
+            { key:'Exportacion',       label:'Exportación', fullLabel:'Exportación',       icon:'ri-ship-line',       color:'#2563eb', id:'categExportacion', valId:'categExpVal',    percId:'categExpPerc' },
+            { key:'Acopio',            label:'Acopio',      fullLabel:'Acopio',            icon:'ri-archive-2-line',  color:'#0891b2', id:'categAcopio',      valId:'categAcoVal',    percId:'categAcoPerc' },
+            { key:'A3',                label:'A3',          fullLabel:'A3',                icon:'ri-focus-3-line',    color:'#db2777', id:'categA3',          valId:'categA3Val',     percId:'categA3Perc' },
+            { key:'Acopio/Exportador', label:'Acopio/Exp.', fullLabel:'Acopio/Exportador', icon:'ri-ship-2-line',     color:'#0d9488', id:'categAcoExp',      valId:'categAcoExpVal', percId:'categAcoExpPerc' },
+            { key:'Consumo',           label:'Consumo',     fullLabel:'Consumo',           icon:'ri-restaurant-line', color:'#d97706', id:'categConsumo',     valId:'categConsVal',   percId:'categConsPerc' },
+            { key:'Molino',            label:'Molino',      fullLabel:'Molino',            icon:'ri-building-2-line', color:'#7c3aed', id:'categMolino',      valId:'categMolVal',    percId:'categMolPerc' },
+            { key:'Otros',             label:'Otros',       fullLabel:'Otros',             icon:'ri-more-2-line',     color:'#64748b', id:'categOtros',       valId:'categOtrVal',    percId:'categOtrPerc' }
         ];
         // Resuelve el valor de la columna Mercado del Sheet a una de las 7 categorías canónicas.
         // Tolerante a mayúsculas, acentos, espacios y separadores.
@@ -3198,8 +3195,11 @@ ${totalsRow}
         }
 
         function generateClientTable(contextData, isSortAction = false) {
-            if(!isSortAction) lastClientContext = contextData; 
-            
+            // En modo comprador la grilla de cartera la arma renderVistaCompradora().
+            // No dejar que la grilla de vendedor (clientes + objetivos) la pise.
+            if (VIEW_MODE === 'comprador') return;
+            if(!isSortAction) lastClientContext = contextData;
+
             const targetYears = ['2024', '2025', '2026', '2027'];
             const allRequiredYears = ['2023', '2024', '2025', '2026', '2027'];
             
@@ -4103,9 +4103,18 @@ ${totalsRow}
             // Ordenar por volumen 2026 desc
             filas.sort(function(a,b){ return b.vol - a.vol; });
 
+            // Poblar el dropdown de mercados desde CATEG_LIST (preservando la selección actual)
+            var selMerc = document.getElementById('categMercadoFilter');
+            if (selMerc) {
+                var prev = selMerc.value || 'all';
+                selMerc.innerHTML = '<option value="all">Todos los mercados</option>' +
+                    CATEG_LIST.map(function(c){ return '<option value="'+c.key+'">'+c.fullLabel+'</option>'; }).join('');
+                selMerc.value = prev;
+            }
+
             tbody.innerHTML = '';
-            var mercadoLabel = { 'Exportacion':'Exportación', 'Molino':'Molino', 'Consumo':'Consumo', 'Otros':'Otros' };
-            var colorMercado = { 'Exportacion':'#2563eb', 'Molino':'#7c3aed', 'Consumo':'#d97706', 'Otros':'#64748b' };
+            var mercadoLabel = {}, colorMercado = {};
+            CATEG_LIST.forEach(function(c){ mercadoLabel[c.key] = c.fullLabel; colorMercado[c.key] = c.color; });
             filas.forEach(function(f){
                 var tr = document.createElement('tr');
                 tr.className = 'categ-modal-row';
