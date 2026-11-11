@@ -1596,7 +1596,7 @@
         const CANJEADORES_CUITS = Object.keys(CANJEADORES_MAP);
         // Versión sin guiones (el parser del DB guarda d.cuitLimpio = solo dígitos)
         const CANJEADORES_CUITS_DIG = CANJEADORES_CUITS.map(c => c.replace(/\D/g, ''));
-        const CANJEADORES_DIG_TO_CANON = {};
+        let CANJEADORES_DIG_TO_CANON = {};
         Object.keys(CANJEADORES_MAP).forEach(c => {
             CANJEADORES_DIG_TO_CANON[c.replace(/\D/g, '')] = CANJEADORES_MAP[c];
         });
@@ -1694,7 +1694,10 @@
         let currentChartTab = 'main';
         let lastDashboardData = [];
 
-        const budgetData = [
+        // FALLBACK: esta lista se usa SOLO si el backend no manda la hoja PRESUPUESTO GENERAL
+        // (p.ej. una versión vieja del Apps Script). Si viene el Sheet, budgetData se reemplaza
+        // en onBackendData con lo que tiene la hoja. Una vez validado, se puede borrar este bloque.
+        let budgetData = [
             {'r':'ADRIAN OLIVIERI','t':60000000/1000,'type':'COMERCIAL'},
             {'r':'ANDRES GOSENDE','t':100000000/1000,'type':'COMERCIAL'},
             {'r':'ANDRES TITTAFERRANTE','t':140000000/1000,'type':'COMERCIAL'},
@@ -1742,7 +1745,7 @@
         // Objetivo general del ejercicio 2027: todavía SIN definir (se cargará en una hoja del
         // Sheet y se consume de ahí). Mientras valga 0, el avance y el objetivo diario del
         // ejercicio en curso quedan en cero / "sin objetivo".
-        const OBJETIVO_2027_GENERAL = 0;
+        let OBJETIVO_2027_GENERAL = 0;  // se reemplaza con K2 (Objetivo Total 2027) de la hoja PRESUPUESTO GENERAL
 
         const getMonthFromDate=(dateStr)=>{
             if(!dateStr)return null;
@@ -2108,6 +2111,45 @@
                             PRESU2027_OBJ[k + '|' + normalize(r.repre || '')] = tn;
                         });
                     }
+                    // === PRESUPUESTO GENERAL: clasificación + objetivos por repre/comercial ===
+                    // Reemplaza el budgetData hardcodeado. Las filas sin CLASIFICACION no entran
+                    // (ej: "SIN REPRESENTANTE", "Rosario" si quedó sin tipo) -> para esas, getPilar
+                    // cae a su default (COMERCIAL). Si no viene la hoja, se mantiene el fallback.
+                    if (payload.presupuestoGeneral && payload.presupuestoGeneral.rows && payload.presupuestoGeneral.rows.length) {
+                        const pgRows = payload.presupuestoGeneral.rows;
+                        const nuevo = [];
+                        pgRows.forEach(function(row){
+                            const est = String(row[0]||'').trim();
+                            const clasif = String(row[1]||'').trim().toUpperCase();
+                            const estado = String(row[2]||'').trim().toUpperCase();
+                            const obj26 = parseFloat(row[3]) || 0;
+                            const obj27 = parseFloat(row[4]) || 0;
+                            if (!est || !clasif) return;   // sin nombre o sin clasificar -> fuera del modal
+                            const e = {
+                                r: est,
+                                t: obj26,
+                                type: (clasif === 'REPRESENTANTE') ? 'REPRESENTANTE' : 'COMERCIAL',
+                                obj27: obj27
+                            };
+                            if (estado === 'RETIRADO') e.inactive = true;
+                            if (estado === 'RESERVA') e.reserva = true;
+                            nuevo.push(e);
+                        });
+                        if (nuevo.length) budgetData = nuevo;
+                        const objTot = parseFloat(payload.presupuestoGeneral.objetivoTotal2027);
+                        if (!isNaN(objTot)) OBJETIVO_2027_GENERAL = objTot;
+                    }
+                    // === CANJEADORES: lista oficial CUIT -> nombre (reemplaza CANJEADORES_MAP) ===
+                    if (payload.canjeadores && Array.isArray(payload.canjeadores) && payload.canjeadores.length) {
+                        const nuevoCanj = {};
+                        payload.canjeadores.forEach(function(row){
+                            const cuit = String(row[0]||'').replace(/\D/g,'');
+                            const nombre = String(row[1]||'').trim();
+                            if (cuit) nuevoCanj[cuit] = nombre || cuit;
+                        });
+                        if (Object.keys(nuevoCanj).length) CANJEADORES_DIG_TO_CANON = nuevoCanj;
+                    }
+
                     // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
                     if (payload.sio2026 && Array.isArray(payload.sio2026) && payload.sio2026.length > 1) {
                         try {
@@ -2394,7 +2436,7 @@
         function fillBudgetTable(){
             if(DB.length===0)return;
             const statsMap={};
-            budgetData.forEach(b=>{const r=normalize(b.r);if(!statsMap[r])statsMap[r]={target:0,real:0,type:b.type,rawName:b.r};statsMap[r].target+=0;});  // obj 2027 sin definir -> 0
+            budgetData.forEach(b=>{const r=normalize(b.r);if(!statsMap[r])statsMap[r]={target:0,real:0,type:b.type,rawName:b.r};statsMap[r].target+=(b.obj27||0);});  // obj 2027 por repre (suma del presupuesto cargado)
             DB.forEach(d=>{if(d.e.includes('27')){const r=d.r;if(statsMap[r]){statsMap[r].real+=d.vol;}}});  // real del ejercicio en curso (2027)
 
             let totalRepTarget=0,totalRepReal=0,totalComTarget=0,totalComReal=0,totalOBBTarget=0,totalOBBReal=0;
@@ -2522,7 +2564,7 @@
                 // Objetivo 2026 = b.t (presupuesto del ejercicio cerrado); % cumpl 2026 contra real 2026
                 const obj26=b.t;const cumpl26=obj26>0?(real26/obj26)*100:0;
                 // Objetivo 2027 = 0 por ahora (hasta presupuestar); % cumpl / plan / desvío 2027 quedan vacíos
-                const obj27=0;const cumpl27=obj27>0?(real27/obj27)*100:0;
+                const obj27=b.obj27||0;const cumpl27=obj27>0?(real27/obj27)*100:0;
                 const planYTD=obj27*planPerc;
                 let deviationPerc=0;if(planYTD>0)deviationPerc=((real27/planYTD)*100)-100;else if(real27>0)deviationPerc=100;
                 return{name:b.r,v24:rd['2024'],v25:rd['2025'],v26:real26,obj26:obj26,cumpl26:cumpl26,obj27:obj27,real27:real27,cumpl27:cumpl27,planPerc:planPerc*100,planYTD:planYTD,dev:deviationPerc,usedGlobal:lacksHistory,inactive:!!b.inactive,reserva:!!b.reserva};
@@ -4283,10 +4325,12 @@ ${totalsRow}
             const shareBadge=document.getElementById('shareSioBadge');
             if(shareBadge) shareBadge.style.display='none';
 
-            // Objetivo del ejercicio en curso (2027): aún sin definir -> 0 (avance y objetivo
-            // diario en cero hasta cargar el número). Por repre todavía no hay objetivo 2027.
+            // Objetivo del ejercicio en curso (2027): vista general (all) = Objetivo Total 2027 (K2
+            // de la hoja PRESUPUESTO GENERAL). Filtrando un repre = su objetivo 2027 (suma de su
+            // presupuesto cargado). Donde no hay objetivo todavía, queda 0.
             let target=0;
             if(fr==='all') target=OBJETIVO_2027_GENERAL;
+            else { const bbTarget=budgetData.find(b=>normalize(b.r)===normFr); if(bbTarget) target=bbTarget.obj27||0; }
 
             const currentM = dynamicCurrentMonth;
             const currentY = maxDateInDB ? maxDateInDB.getFullYear() : 2026;
