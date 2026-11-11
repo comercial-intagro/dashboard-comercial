@@ -1083,7 +1083,7 @@
                 <table class="prod-nac-table">
                     <thead>
                         <tr>
-                            <th>PRODUCTO/ COSECHA</th><th>20/21</th><th>21/22</th><th>22/23</th><th>23/24</th><th>24/25</th><th class="pn-proj-th" style="text-align:right;">PROYECCIÓN 25/26</th>
+                            <th>PRODUCTO/ COSECHA</th><th>21/22</th><th>22/23</th><th>23/24</th><th>24/25</th><th>25/26</th><th class="pn-proj-th" style="text-align:right;">PROYECCIÓN 26/27</th>
                         </tr>
                     </thead>
                     <tbody id="prodNacTableBody"></tbody>
@@ -1649,6 +1649,10 @@
 
         let incidenciaSioGlobal = 93.5;
 
+        // Cosechas que muestra el modal Producción Nacional. Default = fallback hardcodeado (20/21..25/26).
+        // Cuando viene el Sheet, se reemplaza por las cosechas de la hoja (se dropea 20/21, se muestran las últimas 6).
+        let PROD_NAC_COSECHAS = ['20/21','21/22','22/23','23/24','24/25','25/26'];
+
         const PROD_NAC_DATA = {
             'SOJA': [46000000, 43200000, 22000000, 50000000, 50150000, 48300000],
             'MAIZ': [51000000, 52000000, 33500000, 47000000, 48750000, 64000000],
@@ -2124,9 +2128,9 @@
                             console.log('[SIO] Sheet cargado | histórico años: ' + Object.keys(SIO_HISTORIC).filter(y=>y!==SIO_CURRENT_YEAR).join(',') + ' | en curso ' + SIO_CURRENT_YEAR + ': ' + Object.keys(parsedAct).length + ' meses');
                         } catch (e) { console.warn("[SIO_ACTUAL] error parseando:", e.message); }
                     }
-                    // === PROD_NAC_DATA desde el Sheet (merge defensivo sobre el fallback) ===
-                    // CONCEPTO | 20/21 | 21/22 | 22/23 | 23/24 | 24/25 | 25/26 (PROY) [| 26/27 futuro].
-                    // Las filas de % se guardan como string 'x,xx%' (así las espera el modal).
+                    // === PROD_NAC_DATA desde el Sheet (data-driven por cosecha) ===
+                    // Header: CONCEPTO | 20/21 | 21/22 | ... | 26/27 PROYECTADO. Se dropea 20/21 y se
+                    // muestran las últimas 6 cosechas. Las filas de % se guardan como string 'x,xx%'.
                     if (payload.prodNac && Array.isArray(payload.prodNac) && payload.prodNac.length > 1) {
                         try {
                             const shareRows = ['Share Ejercicio sobre produccion','Incidencia Sio sobre Produccion','Share Ejercicio sobre Sio Granos'];
@@ -2137,15 +2141,26 @@
                                 const n = (typeof v === 'number') ? v*100 : 0;
                                 return n.toFixed(2).replace('.',',') + '%';
                             };
-                            payload.prodNac.slice(1).forEach(r => {
-                                if (!r) return;
-                                const concepto = String(r[0]||'').trim();
-                                if (!concepto) return;
-                                const esShare = shareRows.indexOf(concepto) >= 0;
-                                const arr = [];
-                                for (let i = 1; i <= 6; i++) { arr.push(esShare ? toPct(r[i]) : sioNum(r[i])); } // 6 cosechas (índice 5 = proyección)
-                                PROD_NAC_DATA[concepto] = arr;
-                            });
+                            // Detectar las columnas de cosecha del header (celdas que contienen 'XX/XX')
+                            const header = (payload.prodNac[0] || []).map(h => String(h||'').trim());
+                            const cosechaCols = [];
+                            for (let i = 1; i < header.length; i++) {
+                                const m = header[i].match(/(\d{2}\/\d{2})/);
+                                if (m) cosechaCols.push({ idx: i, label: m[1] });
+                            }
+                            // dropear 20/21 y quedarse con las últimas 6 cosechas
+                            let display = cosechaCols.filter(c => c.label !== '20/21');
+                            if (display.length > 6) display = display.slice(display.length - 6);
+                            if (display.length) {
+                                PROD_NAC_COSECHAS = display.map(c => c.label);
+                                payload.prodNac.slice(1).forEach(r => {
+                                    if (!r) return;
+                                    const concepto = String(r[0]||'').trim();
+                                    if (!concepto) return;
+                                    const esShare = shareRows.indexOf(concepto) >= 0;
+                                    PROD_NAC_DATA[concepto] = display.map(c => esShare ? toPct(r[c.idx]) : sioNum(r[c.idx]));
+                                });
+                            }
                         } catch (e) { console.warn("[PROD_NAC] error parseando:", e.message); }
                     }
                     // Traducir formato Apps Script al formato gviz que espera setResponse.
@@ -5358,41 +5373,57 @@ ${totalsRow}
             if(!tbody) return;
             tbody.innerHTML = '';
 
-            // Pre-calcular volúmenes de cosecha Intagro desde DB COMPLETO (siempre dinámico, sin filtros aplicados)
-            // Importante: usamos el DB global, no el context filtrado, para mostrar siempre totales históricos
-            const harvestKeys = ['20/21','21/22','22/23','23/24','24/25','25/26'];
+            // Cosechas a mostrar (data-driven desde el Sheet). La última es la proyección.
+            const harvestKeys = PROD_NAC_COSECHAS;
+            const nCos = harvestKeys.length;
+            const projIdx = nCos - 1;
+            const nCols = nCos + 1;
+
+            // Reconstruir el header del modal dinámicamente
+            const pnTheadRow = document.querySelector('.prod-nac-table thead tr');
+            if (pnTheadRow) {
+                pnTheadRow.innerHTML = '<th>PRODUCTO/ COSECHA</th>' + harvestKeys.map((h, i) =>
+                    (i === projIdx)
+                        ? `<th class="pn-proj-th" style="text-align:right;">PROYECCIÓN ${h}</th>`
+                        : `<th style="text-align:right;">${h}</th>`
+                ).join('');
+            }
+
+            // Volúmenes de cosecha Intagro desde DB COMPLETO (dinámico, sin filtros)
             const intagroByHarvest = {};
             harvestKeys.forEach(h => intagroByHarvest[h] = 0);
             if (Array.isArray(DB)) {
-                DB.forEach(d => {
-                    if (intagroByHarvest.hasOwnProperty(d.h)) intagroByHarvest[d.h] += d.vol;
-                });
+                DB.forEach(d => { if (intagroByHarvest.hasOwnProperty(d.h)) intagroByHarvest[d.h] += d.vol; });
             }
+            // Año de ejercicio de cada cosecha (YY/ZZ -> 20ZZ) para el sub-header AÑO
+            const yearOf = (cos) => '20' + (cos.split('/')[1] || '');
 
-            // Bloque Producción Nacional + Cosecha Intagro (inmediatamente debajo) + bloque Ejercicio + bloque SIO
             const keys = ['SOJA', 'MAIZ', 'TRIGO', 'SORGO', 'CEBADA', 'GIRASOL', 'TOTAL GENERAL', 'COSECHA INTAGRO', 'Share Cosecha Intagro sobre Produccion', 'SEP1', 'EJERCICIO COMERCIAL ISA', 'Share Ejercicio sobre produccion', 'SEP2', 'DECLARADO SIO GRANOS', 'Incidencia Sio sobre Produccion', 'Share Ejercicio sobre Sio Granos'];
 
             keys.forEach(key => {
-                if (key.startsWith('SEP')) { tbody.innerHTML += `<tr class="pn-separator"><td colspan="7"></td></tr>`; return; }
+                if (key.startsWith('SEP')) { tbody.innerHTML += `<tr class="pn-separator"><td colspan="${nCols}"></td></tr>`; return; }
                 if (key === 'EJERCICIO COMERCIAL ISA') {
-                    tbody.innerHTML += `<tr><td style="font-weight:800; color:#64748b;">AÑO</td><td style="font-weight:800; text-align:right;">2021</td><td style="font-weight:800; text-align:right;">2022</td><td style="font-weight:800; text-align:right;">2023</td><td style="font-weight:800; text-align:right;">2024</td><td style="font-weight:800; text-align:right;">2025</td><td style="font-weight:800; text-align:right; color:var(--primary); background:#f0fdf4;">2026</td></tr>`;
+                    let añoRow = `<tr><td style="font-weight:800; color:#64748b;">AÑO</td>`;
+                    harvestKeys.forEach((h, i) => {
+                        const st = (i === projIdx) ? 'font-weight:800; text-align:right; color:var(--primary); background:#f0fdf4;' : 'font-weight:800; text-align:right;';
+                        añoRow += `<td style="${st}">${yearOf(h)}</td>`;
+                    });
+                    tbody.innerHTML += añoRow + `</tr>`;
                 }
                 if (key === 'COSECHA INTAGRO') {
-                    // Fila volúmenes Intagro por cosecha (sin sub-header arriba; las cosechas se entienden por contexto del bloque)
-                    let volRow = `<tr class="pn-intagro-row"><td>COSECHA INTAGRO <span style="font-size:0.62rem; font-weight:700; color:#64748b; text-transform:none; letter-spacing:0;">(20/21 · 21/22 · 22/23 · 23/24 · 24/25 · 25/26 vig.)</span></td>`;
+                    const lbl = harvestKeys.map((h, i) => (i === projIdx) ? h + ' vig.' : h).join(' · ');
+                    let volRow = `<tr class="pn-intagro-row"><td>COSECHA INTAGRO <span style="font-size:0.62rem; font-weight:700; color:#64748b; text-transform:none; letter-spacing:0;">(${lbl})</span></td>`;
                     harvestKeys.forEach((h, i) => {
                         const v = intagroByHarvest[h];
                         const txt = v > 0 ? Math.round(v).toLocaleString('de-DE') : '-';
-                        const extra = (i === 5) ? 'background:#dcfce7;' : '';
+                        const extra = (i === projIdx) ? 'background:#dcfce7;' : '';
                         volRow += `<td style="${extra}">${txt}</td>`;
                     });
-                    volRow += `</tr>`;
-                    tbody.innerHTML += volRow;
+                    tbody.innerHTML += volRow + `</tr>`;
                     return;
                 }
                 if (key === 'Share Cosecha Intagro sobre Produccion') {
-                    // Calcular shares y aplicar semáforo (escala con valores válidos)
-                    const totalGenArr = PROD_NAC_DATA['TOTAL GENERAL'];
+                    const totalGenArr = PROD_NAC_DATA['TOTAL GENERAL'] || [];
                     const shares = harvestKeys.map((h, i) => {
                         const v = intagroByHarvest[h];
                         const totGen = totalGenArr[i];
@@ -5402,10 +5433,9 @@ ${totalsRow}
                     const minR = valid.length ? Math.min(...valid) : 0;
                     const maxR = valid.length ? Math.max(...valid) : 0;
                     const range = maxR - minR;
-
                     let shareRow = `<tr class="pn-intagro-share"><td>Share Cosecha Intagro / Producción</td>`;
                     shares.forEach((s, i) => {
-                        const extra = (i === 5) ? 'background:#dcfce7;' : '';
+                        const extra = (i === projIdx) ? 'background:#dcfce7;' : '';
                         if (s === null) {
                             shareRow += `<td style="${extra} color:#cbd5e1;">-</td>`;
                         } else {
@@ -5416,53 +5446,52 @@ ${totalsRow}
                             shareRow += `<td style="${extra} color:${color} !important; font-weight:900;">${s.toFixed(2).replace('.', ',')}%</td>`;
                         }
                     });
-                    shareRow += `</tr>`;
-                    tbody.innerHTML += shareRow;
+                    tbody.innerHTML += shareRow + `</tr>`;
                     return;
                 }
 
+                const rowArr = PROD_NAC_DATA[key] || [];
                 let isSemRow = ['Share Ejercicio sobre produccion', 'Incidencia Sio sobre Produccion', 'Share Ejercicio sobre Sio Granos'].includes(key);
                 let minR = 0, maxR = 0, rowVals = [];
 
                 if (isSemRow) {
-                    rowVals = PROD_NAC_DATA[key].map((v, i) => {
-                        if(i===5 && key==='Incidencia Sio sobre Produccion') return incidenciaSioGlobal;
-                        if(i===5 && key==='Share Ejercicio sobre Sio Granos') {
-                            let tg = PROD_NAC_DATA['TOTAL GENERAL'][5], ds = tg * (incidenciaSioGlobal / 100), isa = PROD_NAC_DATA['EJERCICIO COMERCIAL ISA'][5];
-                            return (isa / ds) * 100;
+                    rowVals = rowArr.map((v, i) => {
+                        if(i===projIdx && key==='Incidencia Sio sobre Produccion') return incidenciaSioGlobal;
+                        if(i===projIdx && key==='Share Ejercicio sobre Sio Granos') {
+                            let tg = (PROD_NAC_DATA['TOTAL GENERAL']||[])[projIdx], ds = tg * (incidenciaSioGlobal / 100), isa = (PROD_NAC_DATA['EJERCICIO COMERCIAL ISA']||[])[projIdx];
+                            return (ds > 0) ? (isa / ds) * 100 : 0;
                         }
                         return typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v;
                     });
                     let validVals = rowVals.filter(v => !isNaN(v));
-                    minR = Math.min(...validVals); maxR = Math.max(...validVals);
+                    minR = validVals.length ? Math.min(...validVals) : 0; maxR = validVals.length ? Math.max(...validVals) : 0;
                 }
 
                 let row = `<tr><td>${key}</td>`;
-                PROD_NAC_DATA[key].forEach((v, i) => {
-                    let valToPrint = v, styleExtra = i === 5 ? 'background:#f0fdf4;' : '';
-                    if (i === 5) {
+                rowArr.forEach((v, i) => {
+                    let valToPrint = v, styleExtra = i === projIdx ? 'background:#f0fdf4;' : '';
+                    if (i === projIdx) {
                         if (key === 'Incidencia Sio sobre Produccion') { row += `<td style="${styleExtra}"><input type="number" step="0.1" value="${incidenciaSioGlobal}" onchange="updateIncidencia(this.value)" class="dynamic-input"> %</td>`; return; }
-                        if (key === 'DECLARADO SIO GRANOS') { let totalGen = PROD_NAC_DATA['TOTAL GENERAL'][5]; valToPrint = totalGen * (incidenciaSioGlobal / 100); }
+                        if (key === 'DECLARADO SIO GRANOS') { let totalGen = (PROD_NAC_DATA['TOTAL GENERAL']||[])[projIdx]; valToPrint = totalGen * (incidenciaSioGlobal / 100); }
                         if (key === 'Share Ejercicio sobre Sio Granos') {
-                            let totalGen = PROD_NAC_DATA['TOTAL GENERAL'][5], declSio = totalGen * (incidenciaSioGlobal / 100), isaVol = PROD_NAC_DATA['EJERCICIO COMERCIAL ISA'][5];
-                            valToPrint = (isaVol / declSio) * 100;
+                            let totalGen = (PROD_NAC_DATA['TOTAL GENERAL']||[])[projIdx], declSio = totalGen * (incidenciaSioGlobal / 100), isaVol = (PROD_NAC_DATA['EJERCICIO COMERCIAL ISA']||[])[projIdx];
+                            valToPrint = (declSio > 0) ? (isaVol / declSio) * 100 : 0;
                             let semStyle = '', range = maxR - minR, norm = range === 0 ? 0.5 : (valToPrint - minR) / range;
                             if (norm > 0.66) semStyle = 'color:#16a34a !important; font-weight:900;'; else if (norm < 0.33) semStyle = 'color:#dc2626 !important; font-weight:900;'; else semStyle = 'color:#d97706 !important; font-weight:900;';
                             row += `<td style="${styleExtra} ${semStyle} font-size:0.8rem;">${valToPrint.toFixed(2)}%</td>`; return;
                         }
                     }
 
-                    if (key === 'TOTAL GENERAL' && i === 5) { styleExtra = 'background:#ccfbf1;color:#0f766e;'; }
-                    if (isSemRow && i !== 5) { 
+                    if (key === 'TOTAL GENERAL' && i === projIdx) { styleExtra = 'background:#ccfbf1;color:#0f766e;'; }
+                    if (isSemRow && i !== projIdx) {
                         let curV = rowVals[i], range = maxR - minR, norm = range === 0 ? 0.5 : (curV - minR) / range, semStyle = '';
                         if (norm > 0.66) semStyle = 'color:#16a34a !important; font-weight:900;'; else if (norm < 0.33) semStyle = 'color:#dc2626 !important; font-weight:900;'; else semStyle = 'color:#d97706 !important; font-weight:900;';
-                        styleExtra += semStyle; 
+                        styleExtra += semStyle;
                     }
                     if (typeof valToPrint === 'number') { valToPrint = valToPrint.toLocaleString('de-DE', {maximumFractionDigits:0}); }
                     row += `<td style="${styleExtra}">${valToPrint}</td>`;
                 });
-                row += `</tr>`;
-                tbody.innerHTML += row;
+                tbody.innerHTML += row + `</tr>`;
             });
         }
 
