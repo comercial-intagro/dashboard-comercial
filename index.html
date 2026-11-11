@@ -1007,7 +1007,7 @@
                             <button class="sio-tab"        data-prod="CEBADA"  onclick="setSioProduct('CEBADA', this)">CEBADA</button>
                             <button class="sio-tab"        data-prod="SORGO"   onclick="setSioProduct('SORGO', this)">SORGO</button>
                         </div>
-                        <div id="sioStatusBanner" class="sio-status-banner" style="display:none;"><i class="ri-checkbox-circle-fill"></i><span id="sioStatusTxt">SIO_2026 actualizado</span></div>
+                        <div id="sioStatusBanner" class="sio-status-banner" style="display:none;"><i class="ri-checkbox-circle-fill"></i><span id="sioStatusTxt">SIO actualizado</span></div>
                         <div class="close-btn" onclick="toggleModal('sioModal',false)" style="margin-left:6px;"><i class="ri-close-line"></i></div>
                     </div>
                 </div>
@@ -1017,8 +1017,8 @@
                     <thead>
                         <tr>
                             <th>Mes</th>
-                            <th>2021</th><th>2022</th><th>2023</th><th>2024</th><th>2025</th>
-                            <th class="th-curr">2026</th>
+                            <th>2022</th><th>2023</th><th>2024</th><th>2025</th><th>2026</th>
+                            <th class="th-curr">2027</th>
                         </tr>
                     </thead>
                     <tbody id="sioTableBody"></tbody>
@@ -1479,10 +1479,11 @@
             MONTH_NAMES: {11:'NOV',12:'DIC',1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT'}
         };
         const SHARE_SIO = {'2020':3.24,'2021':2.86,'2022':2.44,'2023':2.63,'2024':2.81,'2025':3.50,'2026':3.04};
-        // Nota: el share del 2026 se calcula dinámicamente desde la grilla SIO (helpers getShare2026Mensual / getShare2026Anual)
+        // Nota: el share del año en curso se calcula dinámicamente desde la grilla SIO (helpers getShareActualMensual / getShareActualAnual)
 
-        // Volúmenes SIO Granos 2021-2025 por mes y producto (en Tn) - HARDCODE (años cerrados)
-        const SIO_HISTORIC = {
+        // FALLBACK de SIO histórico (2021-2025). Se usa SOLO si el backend no manda la hoja
+        // SIO_HISTORICO. Cuando viene el Sheet, SIO_HISTORIC se reconstruye en onBackendData.
+        let SIO_HISTORIC = {
             '2021': {
                 'nov': { total:6216516, CEBADA:284037, GIRASOL:144739, MAIZ:1942762, SOJA:2623734, SORGO:86362, TRIGO:1134882 },
                 'dic': { total:6410532, CEBADA:441459, GIRASOL:112832, MAIZ:1856496, SOJA:2182369, SORGO:53744, TRIGO:1763633 },
@@ -1555,9 +1556,9 @@
             },
         };
 
-        // Año en curso 2026: se carga desde la pestaña SIO_2026 del Google Sheet.
-        // Si la carga falla o todavía no está disponible, se usa este fallback con los datos hasta abril 2026.
-        let SIO_2026 = {
+        // 2026 ahora es un ejercicio CERRADO -> viene completo de la hoja SIO_HISTORICO.
+        // Este fallback parcial (hasta abril) solo se usa si el Sheet no cargó.
+        SIO_HISTORIC['2026'] = {
             'nov': { total:6213546, CEBADA:296969, GIRASOL:188829, MAIZ:1965554, SOJA:815276,  SORGO:41377,  TRIGO:2868929 },
             'dic': { total:9659117, CEBADA:369552, GIRASOL:461196, MAIZ:4216317, SOJA:944020,  SORGO:121305, TRIGO:3414977 },
             'ene': { total:11290033,CEBADA:423502, GIRASOL:472022, MAIZ:5253091, SOJA:1556437, SORGO:159403, TRIGO:3217472 },
@@ -1565,8 +1566,12 @@
             'mar': { total:10593961,CEBADA:410898, GIRASOL:763985, MAIZ:3976180, SOJA:5187688, SORGO:50317,  TRIGO:105717  },
             'abr': { total:8900924, CEBADA:521585, GIRASOL:594806, MAIZ:4014446, SOJA:3064450, SORGO:44483,  TRIGO:429599  },
         };
-        let SIO_2026_LOADED = false; // pasa a true cuando se carga la pestaña SIO_2026 del Sheet
-        let SIO_2026_LOAD_ATTEMPTED = false;
+        // Año en curso del SIO. Se reemplaza por sioActual.year del Sheet (la hoja SIO_2027
+        // arranca vacía; se va cargando mes a mes). Dato data-driven: al renombrar la hoja el
+        // año se actualiza solo desde el backend.
+        let SIO_CURRENT_YEAR = '2027';
+        let SIO_LOADED = false;
+        let SIO_LOAD_ATTEMPTED = false;
 
         // === CANJEADORES — lista oficial (CUIT -> nombre canónico) ===
         // Algunos CUITs unifican varias razones sociales del mismo grupo (ej: Corteva tiene 3).
@@ -1773,92 +1778,13 @@
         
         const normalize=(s)=>{if(!s)return '';return s.toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();};
 
-        // Callback nombrado para la pestaña SIO_2026 del Sheet (carga lazy al abrir el modal)
-        window.onSio2026Loaded = function(json) {
-            const banner = document.getElementById('sioStatusBanner');
-            const txt = document.getElementById('sioStatusTxt');
-            try {
-                if (!json || !json.table || json.status === 'error') throw new Error('respuesta inválida');
-                const rows = json.table.rows || [];
-                if (!rows.length) throw new Error('hoja vacía');
+        const normalizeMesSio = function(m){ return (m||'').toString().trim().toLowerCase().slice(0,3); };
+        const MESES_SIO_VALIDOS = ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'];
 
-                const monthsValid = ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'];
-                const parsed = {};
-                rows.forEach(r => {
-                    if (!r.c) return;
-                    const c0 = r.c[0]; if (!c0) return;
-                    const monRaw = (c0.f !== undefined ? c0.f : c0.v);
-                    if (!monRaw) return;
-                    const mon = monRaw.toString().trim().toLowerCase();
-                    if (!monthsValid.includes(mon)) return;
-                    const num = (idx) => {
-                        const cell = r.c[idx]; if (!cell) return 0;
-                        const v = (cell.v !== undefined && cell.v !== null) ? cell.v : (cell.f !== undefined ? cell.f : 0);
-                        if (v === '' || v === null || v === undefined) return 0;
-                        const n = parseFloat(v.toString().replace(/\./g,'').replace(',','.'));
-                        return isNaN(n) ? 0 : n;
-                    };
-                    parsed[mon] = {
-                        total:   num(1),
-                        CEBADA:  num(2),
-                        GIRASOL: num(3),
-                        MAIZ:    num(4),
-                        SOJA:    num(5),
-                        SORGO:   num(6),
-                        TRIGO:   num(7),
-                    };
-                });
-                if (Object.keys(parsed).length === 0) throw new Error('no se encontraron meses válidos');
-
-                SIO_2026 = parsed;
-                SIO_2026_LOADED = true;
-                if (banner && txt) {
-                    banner.style.display = 'flex';
-                    banner.classList.remove('warn');
-                    txt.innerText = 'SIO_2026 actualizado desde Sheet';
-                    const icn = banner.querySelector('i'); if (icn) icn.className = 'ri-checkbox-circle-fill';
-                }
-                if (document.getElementById('sioModal') && document.getElementById('sioModal').style.display === 'flex') {
-                    if (typeof generateSioTable === 'function') generateSioTable();
-                }
-                // Refrescar el dashboard principal: tarjetas KPI y tabla de estacionalidad usan share 2026 dinámico
-                if (typeof runEngine === 'function' && Array.isArray(DB) && DB.length > 0) {
-                    try { runEngine(); } catch(e) { console.warn('[SIO_2026] no se pudo refrescar dashboard tras cargar Sheet:', e.message); }
-                }
-            } catch (e) {
-                console.warn('[SIO_2026] no se pudo cargar desde el Sheet, usando fallback:', e.message);
-                if (banner && txt) {
-                    banner.style.display = 'flex';
-                    banner.classList.add('warn');
-                    txt.innerText = 'Usando datos locales (no se pudo leer pestaña SIO_2026)';
-                    const icn = banner.querySelector('i'); if (icn) icn.className = 'ri-error-warning-fill';
-                }
-            }
-        };
-
-        function loadSio2026FromSheet() {
-            if (SIO_2026_LOAD_ATTEMPTED) return;
-            SIO_2026_LOAD_ATTEMPTED = true;
-            try {
-                const cb = new Date().getTime();
-                const script = document.createElement('script');
-                script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onSio2026Loaded&sheet=SIO_2026&t=${cb}`;
-                script.onerror = function() {
-                    console.warn('[SIO_2026] script tag falló');
-                    const banner = document.getElementById('sioStatusBanner');
-                    const txt = document.getElementById('sioStatusTxt');
-                    if (banner && txt) {
-                        banner.style.display = 'flex';
-                        banner.classList.add('warn');
-                        txt.innerText = 'Sin conexión al Sheet (datos locales)';
-                        const icn = banner.querySelector('i'); if (icn) icn.className = 'ri-error-warning-fill';
-                    }
-                };
-                document.body.appendChild(script);
-            } catch (e) {
-                console.warn('[SIO_2026] error al solicitar carga:', e.message);
-            }
-        }
+        // El SIO (histórico + año en curso) ahora llega en el payload del backend para todos los
+        // roles. Esta función queda como no-op: ya no hace la llamada gviz a la pestaña (que además
+        // cambió de nombre). Se mantiene el nombre para no romper el punto de llamada al abrir el modal.
+        function loadSioActualFromSheet() { /* no-op: el SIO viene en el payload */ }
 
         window.google={visualization:{Query:{setResponse:function(json){
             const loaderTitle=document.getElementById('loaderTitle');
@@ -2150,49 +2076,77 @@
                         if (Object.keys(nuevoCanj).length) CANJEADORES_DIG_TO_CANON = nuevoCanj;
                     }
 
-                    // Procesar SIO_2026 si vino en el payload (lo enviamos desde el Apps Script v5+)
-                    if (payload.sio2026 && Array.isArray(payload.sio2026) && payload.sio2026.length > 1) {
+                    // === SIO desde el Sheet (histórico cerrado + año en curso) ===
+                    const sioNum = (v) => {
+                        if (v === '' || v === null || v === undefined) return 0;
+                        if (typeof v === 'number') return v;
+                        const n = parseFloat(v.toString().replace(/\./g,'').replace(',','.'));
+                        return isNaN(n) ? 0 : n;
+                    };
+                    // SIO_HISTORICO: EJERCICIO | MES | CEBADA | GIRASOL | MAIZ | SOJA | SORGO | TRIGO | TOTAL
+                    if (payload.sioHistorico && Array.isArray(payload.sioHistorico) && payload.sioHistorico.length > 1) {
                         try {
-                            const sioRows = payload.sio2026.slice(1); // saltar header
-                            const monthsValid = ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'];
-                            const parsed = {};
-                            sioRows.forEach(r => {
-                                if (!r || !r[0]) return;
-                                const mon = r[0].toString().trim().toLowerCase();
-                                if (!monthsValid.includes(mon)) return;
-                                const num = (idx) => {
-                                    const v = r[idx];
-                                    if (v === '' || v === null || v === undefined) return 0;
-                                    if (typeof v === 'number') return v;
-                                    const n = parseFloat(v.toString().replace(/\./g,'').replace(',','.'));
-                                    return isNaN(n) ? 0 : n;
-                                };
-                                parsed[mon] = {
-                                    total:   num(1),
-                                    CEBADA:  num(2),
-                                    GIRASOL: num(3),
-                                    MAIZ:    num(4),
-                                    SOJA:    num(5),
-                                    SORGO:   num(6),
-                                    TRIGO:   num(7),
-                                };
+                            const nuevoHist = {};
+                            payload.sioHistorico.slice(1).forEach(r => {
+                                if (!r) return;
+                                const year = String(r[0]||'').replace(/\D/g,'');
+                                const mes = normalizeMesSio(r[1]);
+                                if (!year || MESES_SIO_VALIDOS.indexOf(mes) < 0) return;
+                                if (!nuevoHist[year]) nuevoHist[year] = {};
+                                const ce=sioNum(r[2]),gi=sioNum(r[3]),ma=sioNum(r[4]),so=sioNum(r[5]),sor=sioNum(r[6]),tr=sioNum(r[7]);
+                                nuevoHist[year][mes] = { CEBADA:ce, GIRASOL:gi, MAIZ:ma, SOJA:so, SORGO:sor, TRIGO:tr, total: sioNum(r[8]) || (ce+gi+ma+so+sor+tr) };
                             });
-                            if (Object.keys(parsed).length > 0) {
-                                SIO_2026 = parsed;
-                                SIO_2026_LOADED = true;
-                                SIO_2026_LOAD_ATTEMPTED = true; // bloquea la llamada gviz posterior
-                                const banner = document.getElementById('sioStatusBanner');
-                                const txt = document.getElementById('sioStatusTxt');
-                                if (banner && txt) {
-                                    banner.classList.remove('warn');
-                                    txt.innerText = 'SIO_2026 actualizado desde Sheet';
-                                    const icn = banner.querySelector('i'); if (icn) icn.className = 'ri-checkbox-circle-fill';
-                                }
-                                console.log("[SIO_2026] cargado desde Apps Script: " + Object.keys(parsed).length + " meses");
+                            if (Object.keys(nuevoHist).length) SIO_HISTORIC = nuevoHist;
+                        } catch (e) { console.warn("[SIO_HISTORICO] error parseando:", e.message); }
+                    }
+                    // SIO año en curso (SIO_2027): MES | TOTAL | CEBADA | GIRASOL | MAIZ | SOJA | SORGO | TRIGO
+                    if (payload.sioActual && payload.sioActual.values && Array.isArray(payload.sioActual.values)) {
+                        try {
+                            const yr = String(payload.sioActual.year || '').replace(/\D/g,'');
+                            if (yr) SIO_CURRENT_YEAR = yr;
+                            const parsedAct = {};
+                            payload.sioActual.values.slice(1).forEach(r => {
+                                if (!r) return;
+                                const mes = normalizeMesSio(r[0]);
+                                if (MESES_SIO_VALIDOS.indexOf(mes) < 0) return;
+                                const b = { total:sioNum(r[1]), CEBADA:sioNum(r[2]), GIRASOL:sioNum(r[3]), MAIZ:sioNum(r[4]), SOJA:sioNum(r[5]), SORGO:sioNum(r[6]), TRIGO:sioNum(r[7]) };
+                                if (b.total>0||b.CEBADA>0||b.GIRASOL>0||b.MAIZ>0||b.SOJA>0||b.SORGO>0||b.TRIGO>0) parsedAct[mes] = b;
+                            });
+                            SIO_HISTORIC[SIO_CURRENT_YEAR] = parsedAct;  // registra el año en curso (aunque esté vacío)
+                            SIO_LOADED = true;
+                            const banner = document.getElementById('sioStatusBanner');
+                            const txt = document.getElementById('sioStatusTxt');
+                            if (banner && txt) {
+                                banner.classList.remove('warn');
+                                txt.innerText = 'SIO ' + SIO_CURRENT_YEAR + ' actualizado desde Sheet';
+                                const icn = banner.querySelector('i'); if (icn) icn.className = 'ri-checkbox-circle-fill';
                             }
-                        } catch (e) {
-                            console.warn("[SIO_2026] error parseando payload:", e.message);
-                        }
+                            console.log('[SIO] Sheet cargado | histórico años: ' + Object.keys(SIO_HISTORIC).filter(y=>y!==SIO_CURRENT_YEAR).join(',') + ' | en curso ' + SIO_CURRENT_YEAR + ': ' + Object.keys(parsedAct).length + ' meses');
+                        } catch (e) { console.warn("[SIO_ACTUAL] error parseando:", e.message); }
+                    }
+                    // === PROD_NAC_DATA desde el Sheet (merge defensivo sobre el fallback) ===
+                    // CONCEPTO | 20/21 | 21/22 | 22/23 | 23/24 | 24/25 | 25/26 (PROY) [| 26/27 futuro].
+                    // Las filas de % se guardan como string 'x,xx%' (así las espera el modal).
+                    if (payload.prodNac && Array.isArray(payload.prodNac) && payload.prodNac.length > 1) {
+                        try {
+                            const shareRows = ['Share Ejercicio sobre produccion','Incidencia Sio sobre Produccion','Share Ejercicio sobre Sio Granos'];
+                            const toPct = (v) => {
+                                if (v === '' || v === null || v === undefined) return '0,00%';
+                                if (typeof v === 'string') return (v.indexOf('%') >= 0) ? v.trim() : ((parseFloat(v.replace(/\./g,'').replace(',','.'))||0).toFixed(2).replace('.',',') + '%');
+                                // número = formato porcentaje de Google (fracción): 0,0266 -> 2,66% | 1,113 -> 111,30%
+                                const n = (typeof v === 'number') ? v*100 : 0;
+                                return n.toFixed(2).replace('.',',') + '%';
+                            };
+                            payload.prodNac.slice(1).forEach(r => {
+                                if (!r) return;
+                                const concepto = String(r[0]||'').trim();
+                                if (!concepto) return;
+                                const esShare = shareRows.indexOf(concepto) >= 0;
+                                const arr = [];
+                                for (let i = 1; i <= 6; i++) { arr.push(esShare ? toPct(r[i]) : sioNum(r[i])); } // 6 cosechas (índice 5 = proyección)
+                                PROD_NAC_DATA[concepto] = arr;
+                            });
+                        } catch (e) { console.warn("[PROD_NAC] error parseando:", e.message); }
                     }
                     // Traducir formato Apps Script al formato gviz que espera setResponse.
                     const rows = payload.data;
@@ -4317,8 +4271,8 @@ ${totalsRow}
                 `;
             }
             
-            // Share SIO 2026 dinámico desde SIO_2026 + DB (Σ Intagro / Σ SIO de meses cargados)
-            const avgShare = getShare2026Anual();
+            // Share SIO del ejercicio en curso desde el Sheet + DB (Σ Intagro / Σ SIO de meses cargados)
+            const avgShare = getShareActualAnual();
             const avgShareStr = avgShare.toFixed(2).replace('.', ',');
 
             // Tarjeta del ejercicio en curso (2027): sin Share SIO hasta cargar SIO 2027 (los datos actuales son 2026).
@@ -4846,8 +4800,8 @@ ${totalsRow}
             let finalTDevDisplay = `${totalRealDev > 0 ? '+' : ''}${Math.round(totalRealDev).toLocaleString('de-DE')}`;
             if (isClientOrProdFiltered) { finalTPlanDisplay = '-'; finalTDevDisplay = '-'; tVarPercText = '-'; totalDevColor = '#64748b'; }
 
-            // Share SIO total del ejercicio 2026 (Σ Intagro / Σ SIO sobre meses con datos en SIO_2026)
-            const avgShare = getShare2026Anual();
+            // Share SIO total del ejercicio en curso (Σ Intagro / Σ SIO sobre meses con datos)
+            const avgShare = getShareActualAnual();
             const avgShareStr = avgShare.toFixed(2).replace('.', ',');
 
             tbody.innerHTML += `<tr><td style="font-weight:800; color:var(--primary); text-align:left;">TOTAL</td><td style="text-align:center; font-weight:800; color:var(--primary);">-</td><td style="font-weight:800; color:var(--primary); text-align:right;">${Math.round(totalVol26).toLocaleString('de-DE')}</td><td style="font-weight:800; color:var(--primary); text-align:right;">100%</td><td style="font-weight:900; color:#64748b; text-align:right;">${finalTPlanDisplay}</td><td style="font-weight:900; text-align:right; color:${totalDevColor};">${finalTDevDisplay}</td><td style="font-weight:900; text-align:right; color:${totalDevColor};">${tVarPercText}</td></tr>`;
@@ -4935,9 +4889,7 @@ ${totalsRow}
 
         function getSioVolumeForMonthYear(month, year, product) {
             const yearKey = String(year);
-            let bucket;
-            if (yearKey === '2026') bucket = SIO_2026[month];
-            else bucket = SIO_HISTORIC[yearKey] ? SIO_HISTORIC[yearKey][month] : null;
+            const bucket = SIO_HISTORIC[yearKey] ? SIO_HISTORIC[yearKey][month] : null;
             if (!bucket) return 0;
             if (product === 'ALL') return bucket.total || 0;
             return bucket[product] || 0;
@@ -4964,12 +4916,13 @@ ${totalsRow}
             return map[n] || '';
         }
 
-        // Share Intagro/SIO mensual del ejercicio 2026 (suma de los 7 productos)
-        // Devuelve el share como string formateado 'x,xx%' o null si no hay datos en SIO_2026 para ese mes
-        function getShare2026Mensual(monthNum) {
+        // Share Intagro/SIO mensual del ejercicio EN CURSO (suma de los 7 productos)
+        // Devuelve el share como string formateado 'x,xx%' o null si no hay datos de SIO para ese mes
+        function getShareActualMensual(monthNum) {
             const ms = monthNumToStr(monthNum);
             if (!ms) return null;
-            const sioBucket = SIO_2026[ms];
+            const sioYear = SIO_HISTORIC[SIO_CURRENT_YEAR] || {};
+            const sioBucket = sioYear[ms];
             if (!sioBucket) return null;
             // Respetar el filtro de producto: si hay un producto filtrado, usar el SIO
             // y el volumen Intagro de ESE producto; si no, el total.
@@ -4983,25 +4936,26 @@ ${totalsRow}
                 prodParam = 'ALL';
             }
             if (!sioRef || sioRef <= 0) return null;
-            const intVol = getIntagroVolumeForMonthYear(ms, '2026', prodParam);
+            const intVol = getIntagroVolumeForMonthYear(ms, SIO_CURRENT_YEAR, prodParam);
             if (intVol <= 0) return null;
             const share = (intVol / sioRef) * 100;
             return share.toFixed(2).replace('.', ',') + '%';
         }
 
-        // Share Intagro/SIO anual del ejercicio 2026 acumulado: Σ Intagro / Σ SIO de los meses cargados
-        function getShare2026Anual() {
+        // Share Intagro/SIO anual del ejercicio EN CURSO acumulado: Σ Intagro / Σ SIO de los meses cargados
+        function getShareActualAnual() {
             const fp = document.getElementById('fProd') ? document.getElementById('fProd').value : 'all';
+            const sioYear = SIO_HISTORIC[SIO_CURRENT_YEAR] || {};
             let sumSio = 0, sumInt = 0;
             ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'].forEach(ms => {
-                const sioBucket = SIO_2026[ms];
+                const sioBucket = sioYear[ms];
                 if (!sioBucket) return;
                 let sioRef, prodParam;
                 if (fp && fp !== 'all') { sioRef = sioBucket[fp]; prodParam = fp; }
                 else { sioRef = sioBucket.total; prodParam = 'ALL'; }
                 if (!sioRef || sioRef <= 0) return;
                 sumSio += sioRef;
-                sumInt += getIntagroVolumeForMonthYear(ms, '2026', prodParam);
+                sumInt += getIntagroVolumeForMonthYear(ms, SIO_CURRENT_YEAR, prodParam);
             });
             if (sumSio <= 0) return 0;
             return (sumInt / sumSio) * 100;
@@ -5271,7 +5225,20 @@ ${totalsRow}
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            const years = ['2021','2022','2023','2024','2025','2026'];
+            // Años data-driven: los del SIO histórico + el año en curso. Mostramos los últimos 6.
+            const SIO_MAX_COLS = 6;
+            const yearSet = {};
+            Object.keys(SIO_HISTORIC).forEach(y => { if (/^\d{4}$/.test(y)) yearSet[y] = true; });
+            yearSet[SIO_CURRENT_YEAR] = true;  // columna del año en curso aunque la hoja esté vacía
+            let years = Object.keys(yearSet).sort();
+            if (years.length > SIO_MAX_COLS) years = years.slice(years.length - SIO_MAX_COLS);
+            // Reconstruir el encabezado (el año en curso lleva el badge CURSO)
+            const sioTheadRow = document.querySelector('#sioTable thead tr');
+            if (sioTheadRow) {
+                sioTheadRow.innerHTML = '<th>Mes</th>' + years.map(y =>
+                    (y === SIO_CURRENT_YEAR) ? `<th class="th-curr">${y}</th>` : `<th>${y}</th>`
+                ).join('');
+            }
             const months = ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'];
             const monthLabels = {'nov':'NOV','dic':'DIC','ene':'ENE','feb':'FEB','mar':'MAR','abr':'ABR','may':'MAY','jun':'JUN','jul':'JUL','ago':'AGO','sep':'SEP','oct':'OCT'};
 
@@ -5334,7 +5301,7 @@ ${totalsRow}
                     tRow += `<td><span class="sio-cell-empty">-</span></td>`;
                 } else {
                     const dataAttr = `data-mes="TOTAL" data-year="${y}" data-int="${formatN(intVol)}" data-share="${formatP(share)}" data-sio="${formatN(sioVol)}"`;
-                    tRow += `<td><div class="sio-cell" ${dataAttr} onmousemove="showSioTooltip(event,this)" onmouseleave="hideSioTooltip()"><span class="sio-cell-vol" style="color:${y==='2026'?'var(--primary)':'#0f172a'};">${formatN(sioVol)}</span>${share>0?`<span class="sio-cell-share" style="background:#f0fdf4;color:var(--primary);">${formatP(share)}</span>`:''}</div></td>`;
+                    tRow += `<td><div class="sio-cell" ${dataAttr} onmousemove="showSioTooltip(event,this)" onmouseleave="hideSioTooltip()"><span class="sio-cell-vol" style="color:${y===SIO_CURRENT_YEAR?'var(--primary)':'#0f172a'};">${formatN(sioVol)}</span>${share>0?`<span class="sio-cell-share" style="background:#f0fdf4;color:var(--primary);">${formatP(share)}</span>`:''}</div></td>`;
                 }
             });
             tRow += `</tr>`;
@@ -5531,7 +5498,7 @@ ${totalsRow}
             // Hooks específicos al abrir el modal SIO
             if (id === 'sioModal' && show) {
                 // Disparar carga del Sheet sólo la primera vez
-                if (typeof loadSio2026FromSheet === 'function') loadSio2026FromSheet();
+                if (typeof loadSioActualFromSheet === 'function') loadSioActualFromSheet();
                 // Generar la grilla con lo que tengamos cargado en ese momento
                 if (typeof generateSioTable === 'function') generateSioTable();
             }
