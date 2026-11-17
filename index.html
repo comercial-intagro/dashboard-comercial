@@ -4353,7 +4353,7 @@ ${totalsRow}
             if (remainingWorkingDays < 1) remainingWorkingDays = 1;
 
             let totalHistForPlan = 0;
-            const historicDataForPlan = context.filter(d=>d.e>='2021'&&d.e<='2025');
+            const historicDataForPlan = context.filter(d=>d.e>='2022'&&d.e<='2026');
             historicDataForPlan.forEach(d => { totalHistForPlan += d.vol; });
             
             let estPercMap = {};
@@ -4363,7 +4363,7 @@ ${totalsRow}
                 estPercMap[m] = totalHistForPlan > 0 ? (mHist / totalHistForPlan) : 0;
             });
 
-            const globalHistoric = DB.filter(d=>d.e>='2021'&&d.e<='2025');
+            const globalHistoric = DB.filter(d=>d.e>='2022'&&d.e<='2026');
             let globalTotalHist = 0;
             globalHistoric.forEach(d => { globalTotalHist += d.vol; });
             
@@ -4374,7 +4374,7 @@ ${totalsRow}
                 globalEstPercMap[m] = globalTotalHist > 0 ? (mHist / globalTotalHist) : 0;
             });
 
-            const contextHistBase = context.filter(d=>d.e>='2021'&&d.e<='2023').reduce((a,b)=>a+b.vol,0);
+            const contextHistBase = context.filter(d=>d.e>='2022'&&d.e<='2024').reduce((a,b)=>a+b.vol,0);
             const lacksHistory = (fr!=='all'||fv!=='all')&&contextHistBase===0;
             
             let activeEstPercMap = lacksHistory ? globalEstPercMap : estPercMap;
