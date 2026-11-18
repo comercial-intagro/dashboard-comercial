@@ -1659,6 +1659,7 @@
         // Fase 2 - multi-usuario: rol y representante del usuario actual
         let USER_ROL = 'GERENCIAL';
         let USER_REPRESENTANTE = '';
+        let USER_HASH = ''; // hash para el link al Presupuesto 2027 externo (col D hoja USUARIOS)
         // Maestro de clientes (fuente de verdad cliente -> comercial). Se arma del payload.
         let MAESTRO_BY_CUIT = {};        // cuit -> {cuit,nombre,comercial,comercialN,esProsp}
         let MAESTRO_BY_REPRE = {};       // comercial normalizado -> [entradas del maestro]
@@ -1979,6 +1980,7 @@
                     // Rol del usuario (Fase 2 - multi-usuario). Default GERENCIAL por compatibilidad.
                     USER_ROL = (payload.rol || 'GERENCIAL').toString().toUpperCase();
                     USER_REPRESENTANTE = (payload.representante || '').toString().toUpperCase();
+                    USER_HASH = (payload.hashPresupuesto2027 || '').toString().trim();
                     // Fecha de actualización del DB GENERAL (para que los cálculos temporales
                     // sean iguales para todos, sin importar la última operación del usuario).
                     GLOBAL_MAX_DATE = null;
