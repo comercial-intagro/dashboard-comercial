@@ -374,6 +374,21 @@
         .val-primary { color: var(--primary); }
         .kpi-sub-line { display: flex; align-items: center; width: 100%; gap: 8px; margin-top: auto; }
         .kpi-sub { font-size: 0.75rem; color: #64748b; font-weight: 800; }
+        /* ===== Tarjeta Objetivo Diario (rediseño 2 columnas) ===== */
+        .card.g-obj { flex-direction: row; gap: 12px; align-items: stretch; }
+        .obj-col-left { display: flex; flex-direction: column; flex: 0 0 auto; justify-content: flex-start; }
+        .obj-big-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .obj-big { font-size: 1.5rem; font-weight: 900; color: var(--primary-dark); line-height: 1; letter-spacing: -0.5px; }
+        .obj-big-unit { font-size: 0.62rem; font-weight: 800; color: #64748b; margin-top: 3px; }
+        .obj-vdiv { width: 1px; background: #e8edf2; align-self: stretch; margin: 1px 0; flex: 0 0 auto; }
+        .obj-col-right { flex: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; min-width: 0; }
+        .obj-badge { font-size: 0.6rem; font-weight: 800; color: #0f766e; background: #ccfbf1; padding: 2px 6px; border-radius: 5px; line-height: 1; border: 1px solid #99f6e4; white-space: nowrap; margin-bottom: 2px; }
+        .obj-sec-num { font-size: 0.85rem; font-weight: 900; color: var(--text-main); line-height: 1; white-space: nowrap; }
+        .obj-sec-num span { font-size: 0.55rem; font-weight: 800; color: #64748b; }
+        .obj-sub-rows { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+        .obj-sub-rows .osr { font-size: 0.62rem; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+        .obj-sub-rows .osr .k { color: #64748b; }
+        .obj-sub-rows .osr .plan { color: var(--primary); }
         .share-badge-inline {
             font-size: 0.6rem; color: var(--primary); font-weight: 800; background: #dcfce7;
             border-radius: 4px; padding: 2px 4px; margin-left: auto; border: 1px solid #bbf7d0;
@@ -1274,15 +1289,18 @@
 
                         <!-- LA TARJETA DEL OBJETIVO -->
                         <div class="card g-obj">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-bottom:2px;">
+                            <div class="obj-col-left">
                                 <div class="kpi-lbl" id="kTargetLbl" style="width:auto; margin-bottom:0;">OBJETIVO DIARIO</div>
-                                <div id="kDaysLeft" style="font-size:0.65rem; font-weight:800; color:#0f766e; background:#ccfbf1; padding:2px 5px; border-radius:4px; line-height:1; border:1px solid #99f6e4; flex-shrink:0;">0 Días Rest.</div>
+                                <div class="obj-big-wrap">
+                                    <div class="obj-big" id="kTargetEjercicio">0</div>
+                                    <div class="obj-big-unit">Tn / día</div>
+                                </div>
                             </div>
-                            <div class="kpi-main-area">
-                                <div class="kpi-val" id="kTargetMonth" style="color:var(--text-main);">0 Tn / Día</div>
-                            </div>
-                            <div class="kpi-sub-line">
-                                <div class="kpi-sub" id="kTargetSub" style="color:var(--text-main); font-weight:800; font-size:0.65rem;">Plan: 0 Tn / Desvío: 0 Tn</div>
+                            <div class="obj-vdiv"></div>
+                            <div class="obj-col-right">
+                                <div id="kDaysLeft" class="obj-badge">0 Días Rest.</div>
+                                <div class="obj-sec-num" id="kTargetMonth">0 <span>Tn/día</span></div>
+                                <div class="obj-sub-rows" id="kTargetSub"></div>
                             </div>
                         </div>
 
@@ -1607,7 +1625,10 @@
         const AR_HOLIDAYS = [
             '2024-01-01', '2024-02-12', '2024-02-13', '2024-03-24', '2024-03-28', '2024-03-29', '2024-04-01', '2024-04-02', '2024-05-01', '2024-05-25', '2024-06-17', '2024-06-20', '2024-07-09', '2024-10-11', '2024-11-18', '2024-12-08', '2024-12-25',
             '2025-01-01', '2025-03-03', '2025-03-04', '2025-03-24', '2025-04-02', '2025-04-17', '2025-04-18', '2025-05-01', '2025-05-25', '2025-06-16', '2025-06-20', '2025-07-09', '2025-08-18', '2025-10-12', '2025-11-24', '2025-12-08', '2025-12-25',
-            '2026-01-01', '2026-02-16', '2026-02-17', '2026-03-23', '2026-03-24', '2026-04-02', '2026-04-03', '2026-05-01', '2026-05-25', '2026-06-15', '2026-06-20', '2026-07-09', '2026-08-17', '2026-10-12', '2026-11-23', '2026-12-08', '2026-12-25'
+            '2026-01-01', '2026-02-16', '2026-02-17', '2026-03-23', '2026-03-24', '2026-04-02', '2026-04-03', '2026-05-01', '2026-05-25', '2026-06-15', '2026-06-20', '2026-07-09', '2026-08-17', '2026-10-12', '2026-11-23', '2026-12-08', '2026-12-25',
+            // 2027 - feriados nacionales (Ley 27.399) + Jueves Santo. OJO: los días no laborables con fines
+            // turísticos (puentes) de 2027 AÚN NO están definidos por decreto; agregarlos acá cuando se publiquen.
+            '2027-01-01', '2027-02-08', '2027-02-09', '2027-03-24', '2027-03-25', '2027-03-26', '2027-04-02', '2027-05-01', '2027-05-25', '2027-06-20', '2027-06-21', '2027-07-09', '2027-08-16', '2027-10-11', '2027-11-20', '2027-12-08', '2027-12-25'
         ];
         function isWorkingDay(dateObj) {
             if (!dateObj) return false;
@@ -1956,6 +1977,7 @@
 
             // Callback global que el Apps Script va a invocar con los datos
             window.onBackendData = function(payload) {
+                var __tCb = performance.now(); // diagnóstico de carga (etapa 1)
                 try {
                     window.__loadRetries = 0; // conexión exitosa, resetear contador de reintentos
                     if (!payload || !payload.ok) {
@@ -2189,6 +2211,7 @@
             };
 
             const cacheBuster = new Date().getTime();
+            window.__perfReqStart = performance.now(); // diagnóstico de carga (etapa 1)
             const script = document.createElement('script');
             script.src = `${BACKEND_URL}?callback=onBackendData&id_token=${encodeURIComponent(__googleIdToken)}&t=${cacheBuster}`;
             script.onerror = function() {
@@ -2394,9 +2417,38 @@
                 } catch(e) {
                     console.error("Error al renderizar el dashboard:", e);
                 }
+                try { logLoadPerf(payload, __tCb); } catch(e){}
             }else{
                 showCriticalError("No se encontraron registros numéricos válidos en el archivo.");
             }
+        }
+
+        // ===== Diagnóstico de tiempos de carga (etapa 1 del plan de performance) =====
+        // Imprime en consola el reparto: servidor / transporte / cliente. Temporal:
+        // una vez que tengamos los números, se quita junto con los timings del backend.
+        function logLoadPerf(payload, tCb){
+            const sv = (payload && payload.timings) || {};
+            const reqStart = window.__perfReqStart || tCb;
+            const netMs = Math.round(tCb - reqStart);              // request -> callback (incluye backend)
+            const buildMs = Math.round(performance.now() - tCb);  // armar DB + render en el navegador
+            const backendMs = sv.backendTotal_ms || 0;
+            const transporteMs = Math.max(0, netMs - backendMs);  // serializar + red + descarga + parse JSON
+            let sizeMB = null;
+            try { sizeMB = +(JSON.stringify(payload.data).length/1048576).toFixed(2); } catch(e){}
+            console.log('%c⏱️ Diagnóstico de carga — Dashboard Intagro','font-weight:bold;font-size:13px;color:#005c35;');
+            console.table({
+                '1) Backend total (servidor)':          backendMs + ' ms',
+                '   · parse histórico (cache)':          (sv.historicParse_ms||0) + ' ms',
+                '   · lectura ventana viva (Sheet)':     (sv.liveRead_ms||0) + ' ms',
+                '   · filtrar por usuario':              (sv.filtrarUsuario_ms||0) + ' ms',
+                '   · otras hojas':                      (sv.otrasHojas_ms||0) + ' ms',
+                '2) Transporte (serializar+red+parse)':  transporteMs + ' ms',
+                '3) Cliente (armar DB + render)':        buildMs + ' ms',
+                'TOTAL aprox (de pedir a listo)':        (netMs + buildMs) + ' ms'
+            });
+            console.log('Filas enviadas:', sv.filasEnviadas, '| históricas:', sv.historicRows,
+                        '| vivas:', sv.liveRows, '| cacheMiss:', sv.cacheMiss,
+                        '| payload de datos ≈', sizeMB, 'MB (sin comprimir)');
         }
 
         function setProfileFilter(filterType,btn){
@@ -4453,12 +4505,28 @@ ${totalsRow}
                 let devColor = desvioHistoricoMes > 0 ? 'var(--trend-down)' : (desvioHistoricoMes < 0 ? 'var(--trend-up)' : '#64748b');
                 let devSign = desvioHistoricoMes > 0 ? '+' : '';
                 
-                document.getElementById('kTargetSub').innerHTML = `Plan: <span style="color:var(--primary);">${Math.round(planMesVol).toLocaleString('de-DE')} Tn</span> <span style="color:#cbd5e1;margin:0 4px;">|</span> Desvío: <span style="color:${devColor};">${devSign}${Math.round(desvioHistoricoMes).toLocaleString('de-DE')} Tn</span>`;
+                document.getElementById('kTargetSub').innerHTML = `<div class="osr"><span class="k">Plan:</span> <span class="plan">${Math.round(planMesVol).toLocaleString('de-DE')} Tn</span></div><div class="osr"><span class="k">Desvío:</span> <span style="color:${devColor};">${devSign}${Math.round(desvioHistoricoMes).toLocaleString('de-DE')} Tn</span></div>`;
             }else{
                 document.getElementById('kTargetSub').innerText="-";
             }
             
-            document.getElementById('kTargetMonth').innerText=dailyTarget>0?dailyTarget.toLocaleString('de-DE',{maximumFractionDigits:0})+" Tn / Día":"-";
+            document.getElementById('kTargetMonth').innerHTML=dailyTarget>0?`${Math.round(dailyTarget).toLocaleString('de-DE')} <span>Tn/día</span>`:"-";
+
+            // ===== Objetivo diario PLANO hasta fin de ejercicio (sin estacionalidad) =====
+            // Número principal: faltante total del ejercicio / días hábiles (lun-vie + feriados,
+            // vía getWorkingDays) desde la última fecha del DB hasta el 31/10 (cierre de ejercicio).
+            let flatDaily = 0;
+            if (target > 0 && maxDateInDB) {
+                const endYearEj = (maxDateInDB.getMonth() >= 10) ? maxDateInDB.getFullYear() + 1 : maxDateInDB.getFullYear();
+                const endOfEjercicio = new Date(endYearEj, 9, 31); // 31 de octubre
+                let startNextEj = new Date(maxDateInDB); startNextEj.setDate(startNextEj.getDate() + 1);
+                let remWDEjercicio = getWorkingDays(startNextEj, endOfEjercicio);
+                if (remWDEjercicio < 1) remWDEjercicio = 1;
+                const faltanteEjercicio = Math.max(0, target - v26);
+                flatDaily = faltanteEjercicio / remWDEjercicio;
+            }
+            const kEjEl = document.getElementById('kTargetEjercicio');
+            if (kEjEl) kEjEl.innerText = (target > 0 && flatDaily > 0) ? Math.round(flatDaily).toLocaleString('de-DE') : '-';
             
             const isClientOrProdFiltered = (fv !== 'all' || fp !== 'all' || fDest !== 'all');
             const hideShareSio = (fr !== 'all' || fv !== 'all' || fDest !== 'all'); 
