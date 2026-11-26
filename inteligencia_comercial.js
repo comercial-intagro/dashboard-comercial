@@ -32,8 +32,8 @@
         #icTable tfoot td.e27 { background:#dcfce7; color:var(--primary); }
         #icTable tfoot td.presu { background:#dbe8fe; color:#0f2a6b; }
         .ic-cumpl { display:inline-block; min-width:44px; text-align:right; font-weight:800; }
-        #inteligenciaModal .ic-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 2px 10px; flex-wrap:wrap; }
-        #inteligenciaModal .ic-counters { display:flex; gap:10px; }
+        .ic-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 2px 10px; flex-wrap:wrap; }
+        .ic-counters { display:flex; gap:10px; }
         .ic-counter { background:#f8fafc; border:1px solid #eef1f4; border-radius:10px; padding:8px 14px; text-align:center; min-width:120px; }
         .ic-counter-n { font-size:1.4rem; font-weight:900; line-height:1; color:var(--primary); }
         .ic-counter-l { font-size:0.62rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; }
