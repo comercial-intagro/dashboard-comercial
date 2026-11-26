@@ -585,6 +585,23 @@
             width: 96vw; max-width: 96vw; height: 94vh; max-height: 94vh;
         }
 
+        /* ===== Opción 2: herramientas como vista (panel) dentro del dashboard ===== */
+        .panel-view { flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 1.2vh 1.5vw 1.6vh; min-height: 0; }
+        .panel-backbar { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-shrink: 0; }
+        .panel-back { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; padding: 8px 14px; font-size: 0.8rem; font-weight: 800; color: var(--primary-dark); cursor: pointer; box-shadow: var(--shadow-sm); transition: all .15s ease; }
+        .panel-back:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .panel-back i { font-size: 1rem; }
+        .panel-crumb { font-size: 0.72rem; color: #64748b; font-weight: 600; }
+        .panel-crumb span { margin: 0 2px; color: #cbd5e1; }
+        .panel-crumb b { color: #1e293b; font-weight: 800; }
+        #panelHost { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        /* Al vivir dentro del panel, el contenido del modal deja de ser un popup centrado */
+        #panelHost .modal-content { width: 100% !important; max-width: none !important; height: auto !important; max-height: none !important; flex: 1; min-height: 0; box-shadow: var(--shadow-md); border: 1px solid #eef1f4; padding: 20px 22px; }
+        /* Oculta la "X" de cerrar dentro del panel: para volver está el botón "Volver al dashboard" */
+        #panelHost .close-btn { display: none !important; }
+        /* Resalta la herramienta activa en la barra lateral */
+        .btn-sec.tool-active { background: #fff; color: var(--primary-dark); border-color: #fff; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+
         /* === MODAL CANJEADORES === */
         .canj-tabs { display: flex; gap: 4px; align-items: center; background: #f1f5f9; padding: 4px; border-radius: 50px; border: 1px solid #e2e8f0; }
         .canj-tab { padding: 6px 18px; border-radius: 50px; border: none; background: transparent; color: #64748b; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px; }
@@ -1459,6 +1476,15 @@
 
                 </div>
 
+            </div>
+
+            <!-- Vista panel (Opción 2): reemplaza la grilla del dashboard al abrir una herramienta -->
+            <div id="panelView" class="panel-view" style="display:none;">
+                <div class="panel-backbar">
+                    <button class="panel-back" onclick="closePanelView()"><i class="ri-arrow-left-line"></i> Volver al dashboard</button>
+                    <div class="panel-crumb">Dashboard <span>&rsaquo;</span> <b id="panelCrumbName"></b></div>
+                </div>
+                <div id="panelHost"></div>
             </div>
         </main>
     </div>
@@ -5620,6 +5646,61 @@ ${totalsRow}
             }
         }
 
+        // ===== Opción 2: herramientas como vista (panel) dentro del dashboard =====
+        // En vez de abrir un overlay, el contenido del modal se mueve al área central
+        // (reemplazando la grilla) y se vuelve con el botón "Volver al dashboard".
+        const PANEL_NAMES = {
+            budgetModal: 'Proyección Objetivos',
+            historyModal: 'Vol Histórico Intagro',
+            canjModal: 'Canjeadores',
+            sioModal: 'Histórico SIO Granos',
+            prodNacModal: 'Producción Nacional',
+            categModal: 'Categorización Compradores',
+            inteligenciaModal: 'Inteligencia Comercial'
+        };
+        let _activePanelId = null;
+        function _returnPanelContent(id) {
+            const modal = document.getElementById(id);
+            const host = document.getElementById('panelHost');
+            const content = host ? host.querySelector('.modal-content') : null;
+            if (modal && content) modal.appendChild(content);
+        }
+        function highlightTool(id) {
+            document.querySelectorAll('#toolsSection .btn-sec').forEach(function(btn){ btn.classList.remove('tool-active'); });
+            if (!id) return;
+            const name = (PANEL_NAMES[id] || '').trim();
+            document.querySelectorAll('#toolsSection .btn-sec').forEach(function(btn){
+                if (btn.textContent.trim() === name) btn.classList.add('tool-active');
+            });
+        }
+        function openPanelView(id) {
+            const modal = document.getElementById(id);
+            const content = modal ? modal.querySelector('.modal-content') : null;
+            const host = document.getElementById('panelHost');
+            const view = document.getElementById('panelView');
+            const wrapper = document.querySelector('.content-wrapper');
+            if (!content || !host || !view || !wrapper) return;
+            if (_activePanelId && _activePanelId !== id) _returnPanelContent(_activePanelId);
+            host.innerHTML = '';
+            host.appendChild(content);
+            const nameEl = document.getElementById('panelCrumbName');
+            if (nameEl) nameEl.innerText = PANEL_NAMES[id] || '';
+            highlightTool(id);
+            wrapper.style.display = 'none';
+            view.style.display = 'flex';
+            view.scrollTop = 0;
+            _activePanelId = id;
+        }
+        function closePanelView() {
+            const view = document.getElementById('panelView');
+            const wrapper = document.querySelector('.content-wrapper');
+            if (_activePanelId) _returnPanelContent(_activePanelId);
+            if (view) view.style.display = 'none';
+            if (wrapper) wrapper.style.display = '';
+            highlightTool(null);
+            _activePanelId = null;
+        }
+
         function toggleModal(id, show) {
             // Seguridad Fase 2: los modales de mercado/herramientas son solo para gerenciales.
             // Si un no-gerencial intenta abrir uno (incluso por consola), se bloquea.
@@ -5627,8 +5708,9 @@ ${totalsRow}
             if (show && USER_ROL !== 'GERENCIAL' && modalesGerenciales.indexOf(id) !== -1) {
                 return;
             }
-            const modal = document.getElementById(id);
-            if(modal) modal.style.display = show ? 'flex' : 'none';
+            // Opción 2: la herramienta reemplaza la grilla del dashboard (no abre overlay).
+            if (show) openPanelView(id);
+            else closePanelView();
             // Llenar el modal de categorización al abrirlo
             if (id === 'categModal' && show) {
                 if (typeof llenarCategModal === 'function') llenarCategModal();
